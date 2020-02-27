@@ -1,0 +1,12 @@
+var xhr = new XMLHttpRequest();
+xhr.responseType = "json"; // xhr.response will be parsed into a JSON object
+xhr.open('GET', "https://ipinfo.io/json", true);
+xhr.send();
+ 
+xhr.onreadystatechange = processRequest;
+ 
+function processRequest(e) {
+    if (xhr.readyState == 4 && xhr.status == 200) {
+        alert(xhr.response.ip); // no parsing needed
+    }
+}
