@@ -1,0 +1,47 @@
+# CASE SENSITIVE METHOD
+<Files .htaccess>
+	Order allow,deny
+	Deny from all
+</Files>
+
+Options All -Indexes
+
+DirectoryIndex index.php index.htm index.html
+
+RewriteEngine on
+RewriteBase /
+
+# Force HTTPS on the subdomains/subdirectories login or admin
+#RewriteCond %{HTTPS} off
+#RewriteCond %{HTTP_HOST} ^(login|admin)\. [NC]
+#RewriteCond %{REQUEST_URI} ^(login|admin)\. [NC,OR]
+#RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Force WWW if no subdomain is given
+RewriteCond %{HTTP_HOST} ^[^.]+\.[^.]+$
+RewriteCond %{HTTP_HOST} !^$
+RewriteCond %{HTTPS}s ^on(s)|
+RewriteRule ^ http%1://www.%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+#File Extension
+RewriteEngine on 
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.php -f
+RewriteRule ^(.*)$ $1.php [NC,L]
+#Adding Slash
+RewriteEngine on 
+RewriteCond %{REQUEST_FILENAME} !-d 
+RewriteCond %{REQUEST_FILENAME}\.php -f 
+RewriteRule ^(.*)$ $1.php
+
+<Files ~ "^index\.php|css|js|.*\.png|.*\.jpg|.*\.gif">
+  Allow from all
+</Files>
+
+
+RewriteCond %{HTTP_USER_AGENT} ^HTTrack [OR]
+RewriteCond %{HTTP_USER_AGENT} ^SiteSucker [OR]
+RewriteCond %{HTTP_USER_AGENT} ^WebZip [OR]
+RewriteCond %{HTTP_USER_AGENT} ^WebCopier [OR]
+RewriteCond %{HTTP_USER_AGENT} ^Zeus
+RewriteRule ^.*$ no_download.html [L]
