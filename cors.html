@@ -13,7 +13,7 @@
                  document.getElementById("demo").innerHTML = alert(this.responseText);
                  }
              };
-              xhr.open("POST",
+              xhr.open("GET",
                        "https://quizlet.com/webapi/3.2/app-session/start", true);
              xhr.withCredentials = true;
              xhr.send();
