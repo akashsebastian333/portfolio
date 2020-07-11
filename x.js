@@ -1,4 +1,4 @@
-<script>
+
 var xhr = new XMLHttpRequest();
 xhr.onreadystatechange = function()
 {
@@ -12,4 +12,3 @@ xhr2.send();
 }
 xhr.open("GET", "https://www.patreon.com/home");
 xhr.send();
-</script>
