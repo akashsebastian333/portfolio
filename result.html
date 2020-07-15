@@ -1,0 +1,813 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>HSE RESULTS 2020</title>
+    <meta name="description" content="Kerala SSLC HSE Results 2020" />
+    <meta name="keywords" content="Results,SSLC,HSE,2020,Kerala,KITE" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <!-- Below is for responsiveness-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Below is for Facebook's Opengraph-->
+    <meta property="og:title" content=" HSE Results 2020 - KITE " />
+    <meta property="og:url" content="http://results.kite.kerala.gov.in" />
+    <meta property="og:type" content="website" />
+    <meta property="og:description" content=" HSE Results 2020 ." />
+    <meta property="og:image" content="its.png" />
+    <link rel="stylesheet" href="style.css">
+
+
+
+      <!-- Global site tag (gtag.js) - Google Analytics -->
+      <script async src="https://www.googletagmanager.com/gtag/js?id=UA-90382178-10"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-90382178-10');
+      </script>
+</head>
+
+<body>
+    <div class="page">
+        <div class="header">
+            <div class="logo"><img src="hseresult.png" alt="header" width="387" height="99" /></div>
+
+
+            <div class="logoMobile" style="display:none">
+                <img src="result-min1.png" style="text-align: center;height:80px;width:120;"><br />
+                <div style="display:inline;font-size:1.5em;color: #504848;font-weight:bold"> Kerala HSE Result - 2020
+                </div>
+            </div>
+        </div>
+        <div class=line1></div>
+        <div class=line2></div>
+        <!-- <div class=line3></div>-->
+        <div>
+            <div class="link">
+                <div align="right"><a href="#" onclick="print(document);" style="font-size:10px">Print Result</a> | <a
+                        href="index.html" style="font-size:10px"> Check Another Result</a>&nbsp;&nbsp;</div>
+            </div>
+            <table style="margin-top:10px !important" width="100%">
+                <tr class=cell2>
+                    <td colspan=5>
+                        <iframe id="hiddenContent" width="200" height="200"
+                            style="position:absolute;visibility:hidden;"></iframe>
+                <tr class=cell2>
+                    <td colspan=5>
+                       
+                       
+                       
+                        <!--<li><div id="district"></div></li>-->
+                       <li><div id="regno"></div></li>
+
+                        <li>
+                                <table
+                                    style="background-color: #ffffff;margin-left: 0px;margin-top:0px;border:none;width:100%">
+                                    <tr style="background-color:#ffffff;">
+                                        <td> <div id="name"></div> </td>
+                                        <td><div id="dob"></div>
+                                        </td>
+                                    </tr>
+
+                                    <tr style="background-color:#ffffff;">
+                                        <td>
+                                                <div id="school"></div>
+                                        </td>
+                                        <td>
+                                                <div id="group_name"></div>
+                                        </td>
+                                    </tr>
+                                    <tr style="background-color:#ffffff;">
+                                            <td>
+                                                    <div id="fname"></div>
+                                            </td>
+                                            <td>
+                                                    <div id="mname"></div>
+                                            </td>
+                                        </tr>
+                                </table>
+                            </li>
+
+                    </td>
+                </tr>
+                <tr>
+                    <th class="txtlab">Subject </th>
+                    <th width="22%" align="center" class="txtlab">First Year </th>
+                    <th width="21%" align="center" class="txtlab">Second Year </th>
+                    <th width="22%">
+                        <div align="center" class="txtlab">Total</div>
+                    </th>
+                    <th width="16%" class="txtlab">
+                        <div align="left">Grade</div>
+                    </th>
+                </tr>
+
+                <tr class="cell1">
+                    <td colspan="5">
+                        <div id="s1"></div>
+                    </td>
+                </tr>
+                <tr class="cell2">
+                    <td>CE</td>
+                    <td>
+                        <div id="FP1_CE"></div>
+                    </td>
+                    <td>
+                        <div id="SP1_CE"></div>
+                    </td>
+                    <td>
+                        <div id="TP1_CE"></div>
+                    </td>
+                    <td rowspan="3">
+                        <div id="grade1" class="txtlab"></div>
+                    </td>
+                </tr>
+                <tr class="cell2">
+                    <td>TE</td>
+                    <td>
+                        <div id="FP1_TE"></div>
+                    </td>
+                    <td>
+                        <div id="SP1_TE"></div>
+                    </td>
+                    <td>
+                        <div id="TP1_TE"></div>
+                    </td>
+                </tr>
+                <tr class="cell2">
+                    <td>Total</td>
+                    <td>
+                        <div id="FP1_TOT"></div>
+                    </td>
+                    <td>
+                        <div id="SP1_TOT"></div>
+                    </td>
+                    <td>
+                        <div id="TP1_TOT"></div>
+                    </td>
+                </tr>
+                <tr class="cell1">
+                    <td colspan="5">
+                        <div id="s2"></div>
+                    </td>
+                </tr>
+                <tr class="cell2">
+                    <td>CE</td>
+                    <td>
+                        <div id="FP2_CE"></div>
+                    </td>
+                    <td>
+                        <div id="SP2_CE"></div>
+                    </td>
+                    <td>
+                        <div id="TP2_CE"></div>
+                    </td>
+                    <td rowspan="4">
+                        <div id="grade2" class="txtlab"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>PE</td>
+                    <td>
+                        <div id="FP2_PE"></div>
+                    </td>
+                    <td>
+                        <div id="SP2_PE"></div>
+                    </td>
+                    <td>
+                        <div id="TP2_PE"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>TE</td>
+                    <td>
+                        <div id="FP2_TE"></div>
+                    </td>
+                    <td>
+                        <div id="SP2_TE"></div>
+                    </td>
+                    <td>
+                        <div id="TP2_TE"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>Total</td>
+                    <td>
+                        <div id="FP2_TOT"></div>
+                    </td>
+                    <td>
+                        <div id="SP2_TOT"></div>
+                    </td>
+                    <td>
+                        <div id="TP2_TOT"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell1">
+                    <td colspan="5">
+                        <div id="s3"></div>
+                    </td>
+                </tr>
+                <tr class="cell2">
+                    <td>CE</td>
+                    <td>
+                        <div id="FP3_CE"></div>
+                    </td>
+                    <td>
+                        <div id="SP3_CE"></div>
+                    </td>
+                    <td>
+                        <div id="TP3_CE"></div>
+                    </td>
+                    <td rowspan="4">
+                        <div id="grade3" class="txtlab"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>PE</td>
+                    <td>
+                        <div id="FP3_PE"></div>
+                    </td>
+                    <td>
+                        <div id="SP3_PE"></div>
+                    </td>
+                    <td>
+                        <div id="TP3_PE"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>TE</td>
+                    <td>
+                        <div id="FP3_TE"></div>
+                    </td>
+                    <td>
+                        <div id="SP3_TE"></div>
+                    </td>
+                    <td>
+                        <div id="TP3_TE"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>Total</td>
+                    <td>
+                        <div id="FP3_TOT"></div>
+                    </td>
+                    <td>
+                        <div id="SP3_TOT"></div>
+                    </td>
+                    <td>
+                        <div id="TP3_TOT"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell1">
+                    <td colspan="5">
+                        <div id="s4"></div>
+                    </td>
+                </tr>
+                <tr class="cell2">
+                    <td>CE</td>
+                    <td>
+                        <div id="FP4_CE"></div>
+                    </td>
+                    <td>
+                        <div id="SP4_CE"></div>
+                    </td>
+                    <td>
+                        <div id="TP4_CE"></div>
+                    </td>
+                    <td rowspan="4">
+                        <div id="grade4" class="txtlab"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>PE</td>
+                    <td>
+                        <div id="FP4_PE"></div>
+                    </td>
+                    <td>
+                        <div id="SP4_PE"></div>
+                    </td>
+                    <td>
+                        <div id="TP4_PE"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>TE</td>
+                    <td>
+                        <div id="FP4_TE"></div>
+                    </td>
+                    <td>
+                        <div id="SP4_TE"></div>
+                    </td>
+                    <td>
+                        <div id="TP4_TE"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>Total</td>
+                    <td>
+                        <div id="FP4_TOT"></div>
+                    </td>
+                    <td>
+                        <div id="SP4_TOT"></div>
+                    </td>
+                    <td>
+                        <div id="TP4_TOT"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell1">
+                    <td colspan="5">
+                        <div id="s5"></div>
+                    </td>
+                </tr>
+                <tr class="cell2">
+                    <td>CE</td>
+                    <td>
+                        <div id="FP5_CE"></div>
+                    </td>
+                    <td>
+                        <div id="SP5_CE"></div>
+                    </td>
+                    <td>
+                        <div id="TP5_CE"></div>
+                    </td>
+                    <td rowspan="4">
+                        <div id="grade5" class="txtlab"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>PE</td>
+                    <td>
+                        <div id="FP5_PE"></div>
+                    </td>
+                    <td>
+                        <div id="SP5_PE"></div>
+                    </td>
+                    <td>
+                        <div id="TP5_PE"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>TE</td>
+                    <td>
+                        <div id="FP5_TE"></div>
+                    </td>
+                    <td>
+                        <div id="SP5_TE"></div>
+                    </td>
+                    <td>
+                        <div id="TP5_TE"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>Total</td>
+                    <td>
+                        <div id="FP5_TOT"></div>
+                    </td>
+                    <td>
+                        <div id="SP5_TOT"></div>
+                    </td>
+                    <td>
+                        <div id="TP5_TOT"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell1">
+                    <td colspan="5">
+                        <div id="s6"></div>
+                    </td>
+                </tr>
+                <tr class="cell2">
+                    <td>CE</td>
+                    <td>
+                        <div id="FP6_CE"></div>
+                    </td>
+                    <td>
+                        <div id="SP6_CE"></div>
+                    </td>
+                    <td>
+                        <div id="TP6_CE"></div>
+                    </td>
+                    <td rowspan="4">
+                        <div id="grade6" class="txtlab"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>PE</td>
+                    <td>
+                        <div id="FP6_PE"></div>
+                    </td>
+                    <td>
+                        <div id="SP6_PE"></div>
+                    </td>
+                    <td>
+                        <div id="TP6_PE"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>TE</td>
+                    <td>
+                        <div id="FP6_TE"></div>
+                    </td>
+                    <td>
+                        <div id="SP6_TE"></div>
+                    </td>
+                    <td>
+                        <div id="TP6_TE"></div>
+                    </td>
+                </tr>
+
+                <tr class="cell2">
+                    <td>Total</td>
+                    <td>
+                        <div id="FP6_TOT"></div>
+                    </td>
+                    <td>
+                        <div id="SP6_TOT"></div>
+                    </td>
+                    <td>
+                        <div id="TP6_TOT"></div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th colspan=5>
+                        <div id="status">STATUS : </div>
+                    </th>
+                </tr>
+            </table>
+            <div class="remarks" id="grace_mark"><br /></div>
+            <br />
+            <div class=line1></div>
+            <div class=line2></div>
+            <div class=footer>© All Rights Reserved. KITE, General Education Department, Govt of Kerala.</div>
+            <small style="font-size: 8px;line-height:1">
+                Disclaimer: Neither KITE nor Board of Public Examinations is responsible for any inadvertent error that
+                may have
+                crept in the results being published on net. The results published on net are for immediate information
+                to the examinees.
+                These cannot be treated as original mark sheets. Original marksheets will be issued by the Board of
+                Public Examinations separately.
+            </small>
+            <style>
+                @media only screen and (max-width: 960px) {
+                    table {
+                        margin-top: 0px !important;
+
+                    }
+
+                    a {
+                        font-size: 10px;
+                    }
+
+                    #headerImage {
+                        display: none;
+                    }
+
+                    .header {
+                        width: 100%;
+
+                    }
+
+                    body {
+                        background-color: #ffffff;
+                        margin: 0px;
+                    }
+
+                    .page {
+                        width: 100%;
+                        padding-top: 0px;
+                        padding-left: 0px;
+                        padding-bottom: 0px;
+                        padding-right: 0px;
+
+                    }
+
+                    .victers {
+                        background-color: #f1f1f1;
+
+                        height: auto;
+                        text-align: center;
+                    }
+
+                    .content {
+                        height: auto;
+                        width: 100%;
+                    }
+
+                    .footer {
+                        width: auto;
+                        height: 10%;
+                    }
+
+                    .regnoscheme {
+                        display: none;
+                    }
+
+                    .textStyle {
+                        width: 97%;
+                        height: 38px !important;
+                        background-color: #ffffff;
+                        margin-left: 3px;
+                        color: black;
+                        border: 1px solid #c7c4c4;
+                        border-radius: 5px;
+                        font-size: 25px;
+                    }
+
+                    .line1,
+                    .line2,
+                    .line3 {
+                        width: auto;
+
+                    }
+
+                    .line3 {
+                        background-color: #3399cc;
+                    }
+
+                    .regnoinput {
+                        width: 100%;
+                    }
+
+                    .buttonStyle {
+                        background-color: #3399cc;
+                        color: #ffffff;
+                        border-color: #66ccff;
+                        width: 97%;
+                        padding: 10px;
+                        border-radius: 5px;
+                        margin-left: 3px;
+                        margin-top: 10px;
+                        font-size: 20px;
+
+
+                    }
+
+                    .logo {
+                        content: "HSE Results 2020";
+                        margin: auto;
+                        width: 280px !important;
+                        display: none;
+                        background: no-repeat;
+
+                    }
+
+                    .logoMobile {
+                        display: block !important;
+                        text-align: center;
+                        height: auto;
+                    }
+
+                    .line3 {
+                        padding: 10px;
+                        font-size: 15px;
+                    }
+                }
+
+                .content {
+
+                    height: 100%;
+                }
+
+                .textStyle,
+                label {
+                    color: black;
+                    margin-left: 4px;
+                    font-size: 15px;
+                    height: 30px;
+
+                }
+
+                .style1 {
+                    width: 100%;
+                    text-align: center;
+                    margin-top: 20px;
+                    /* background-color: #f1f1f1; */
+                }
+
+                #analysisBtn {
+                    text-align: center;
+                    height: 38;
+                    width: 140;
+                }
+
+                .txtlab {
+                    text-align: center;
+                    text-indent: 0px;
+                }
+            </style>
+        </div>
+
+</body>
+<script language="JavaScript" type="text/javascript">
+    file_type = 'json';
+    folderName = "";
+    name = 'regno';
+    regno = getParameterByName('regno');
+    date_of_birth = getParameterByName('date1');
+
+    date2 = (getParameterByName('date1').split("/"));
+    date1 = new Date(date2[2], date2[1] - 1, date2[0])
+
+    date1 = GetFormattedDate(date1);
+
+
+
+    if (window.XMLHttpRequest) {// code for IE7+, Firefox, Chrome, Opera, Safari
+        req = new XMLHttpRequest();
+    }
+    else {// code for IE6, IE5
+        req = new ActiveXObject("Microsoft.XMLHTTP");
+    }
+    // console.log("reg no",regno.charAt(0));
+    // regno=regno*1;
+    var folderCap = "XxYyZzReSuLtHSE_";
+    var first_digit = regno.charAt(0)+regno.charAt(1);
+    folderName = folderCap + first_digit;
+    req.open('GET', "XxYyZzReSuLtHSE/" + folderName + "/" + date2[2] + date2[1] + date2[0] + regno + "." + file_type + "?regno=" + regno);
+
+    req.onreadystatechange = function () {
+        if (req.readyState == 4) {
+            if (req.status == 200) {
+                var str = req.responseText;
+                // console.log('str data',str);
+                var mark_details = JSON.parse(str);
+                var strArray = str.split("\n");
+                document.getElementById("regno").innerHTML = "Regno : " + mark_details["regno"];
+                document.title = "Regno : " + strArray[0] + " - HSE Result 2020";
+                document.getElementById("name").innerHTML = "Name : " + mark_details["name"].toUpperCase();
+                document.getElementById("school").innerHTML = "School Code: " + mark_details["school"].toUpperCase();
+                document.getElementById("fname").innerHTML = "Father's Name: " + mark_details["fname"].toUpperCase();
+                document.getElementById("mname").innerHTML = "Mother's  Name: " + mark_details["mname"].toUpperCase();
+                document.getElementById("dob").innerHTML = "Dob: " + date_of_birth.toUpperCase();
+                //document.getElementById("district").innerHTML="District : "+strArray[3].toUpperCase();
+                document.getElementById("group_name").innerHTML = "Group Name : " + mark_details["group"].toUpperCase();
+
+                document.getElementById("s1").innerHTML = mark_details["s1"];
+                document.getElementById("FP1_CE").innerHTML = mark_details["fce1"];
+                document.getElementById("FP1_TE").innerHTML = mark_details["fte1"];
+                document.getElementById("FP1_TOT").innerHTML = mark_details["ftot1"];
+                document.getElementById("SP1_CE").innerHTML = mark_details["sce1"];
+                document.getElementById("SP1_TE").innerHTML = mark_details["ste1"];
+                document.getElementById("SP1_TOT").innerHTML = mark_details["stot1"];
+                document.getElementById("TP1_CE").innerHTML = mark_details["tce1"];
+                document.getElementById("TP1_TE").innerHTML = mark_details["tte1"];
+                document.getElementById("TP1_TOT").innerHTML = mark_details["tot1"];
+                document.getElementById("grade1").innerHTML = mark_details["grade1"];
+
+                document.getElementById("s2").innerHTML = mark_details["s2"];
+                document.getElementById("FP2_CE").innerHTML = mark_details["fce2"];
+                document.getElementById("FP2_PE").innerHTML = "--";
+                document.getElementById("FP2_TE").innerHTML = mark_details["fte2"];
+                document.getElementById("FP2_TOT").innerHTML = mark_details["ftot2"];
+                document.getElementById("SP2_CE").innerHTML = mark_details["sce2"];
+                document.getElementById("SP2_PE").innerHTML = mark_details["spe2"];
+                document.getElementById("SP2_TE").innerHTML = mark_details["ste2"];
+                document.getElementById("SP2_TOT").innerHTML = mark_details["stot2"];
+                document.getElementById("TP2_CE").innerHTML = mark_details["tce2"];
+                document.getElementById("TP2_PE").innerHTML = mark_details["tpe2"];
+                document.getElementById("TP2_TE").innerHTML = mark_details["tte2"];
+                document.getElementById("TP2_TOT").innerHTML = mark_details["tot2"];
+                document.getElementById("grade2").innerHTML = mark_details["grade2"];
+
+                document.getElementById("s3").innerHTML = mark_details["s3"];
+                document.getElementById("FP3_CE").innerHTML = mark_details["fce3"];
+                document.getElementById("FP3_PE").innerHTML = "--";
+                document.getElementById("FP3_TE").innerHTML = mark_details["fte3"];
+                document.getElementById("FP3_TOT").innerHTML = mark_details["ftot3"];
+                document.getElementById("SP3_CE").innerHTML = mark_details["sce3"];
+                document.getElementById("SP3_PE").innerHTML = mark_details["spe3"];
+                document.getElementById("SP3_TE").innerHTML = mark_details["ste3"];
+
+               
+
+                document.getElementById("SP3_TOT").innerHTML = mark_details["stot3"];
+                document.getElementById("TP3_CE").innerHTML = mark_details["tce3"];
+                document.getElementById("TP3_PE").innerHTML = mark_details["tpe3"];
+                document.getElementById("TP3_TE").innerHTML = mark_details["tte3"];
+                document.getElementById("TP3_TOT").innerHTML = mark_details["tot3"];
+                document.getElementById("grade3").innerHTML = mark_details["grade3"];
+
+                document.getElementById("s4").innerHTML = mark_details["s4"];
+                document.getElementById("FP4_CE").innerHTML = mark_details["fce4"];
+                document.getElementById("FP4_PE").innerHTML = "--";
+                document.getElementById("FP4_TE").innerHTML = mark_details["fte4"];
+                document.getElementById("FP4_TOT").innerHTML = mark_details["ftot4"];
+                document.getElementById("SP4_CE").innerHTML = mark_details["sce4"];
+                document.getElementById("SP4_PE").innerHTML = mark_details["spe4"];
+                document.getElementById("SP4_TE").innerHTML = mark_details["ste4"];
+                document.getElementById("SP4_TOT").innerHTML = mark_details["stot4"];
+                document.getElementById("TP4_CE").innerHTML = mark_details["tce4"];
+                document.getElementById("TP4_PE").innerHTML = mark_details["tpe4"];
+                document.getElementById("TP4_TE").innerHTML = mark_details["tte4"];
+                document.getElementById("TP4_TOT").innerHTML = mark_details["tot4"];
+                document.getElementById("grade4").innerHTML = mark_details["grade4"];
+
+                document.getElementById("s5").innerHTML = mark_details["s5"];
+                document.getElementById("FP5_CE").innerHTML = mark_details["fce5"];
+                document.getElementById("FP5_PE").innerHTML = "--";
+                document.getElementById("FP5_TE").innerHTML = mark_details["fte5"];
+                document.getElementById("FP5_TOT").innerHTML = mark_details["ftot5"];
+                document.getElementById("SP5_CE").innerHTML = mark_details["sce5"];
+                document.getElementById("SP5_PE").innerHTML = mark_details["spe5"];
+                document.getElementById("SP5_TE").innerHTML = mark_details["ste5"];
+                document.getElementById("SP5_TOT").innerHTML = mark_details["stot5"];
+                document.getElementById("TP5_CE").innerHTML = mark_details["tce5"];
+                document.getElementById("TP5_PE").innerHTML = mark_details["tpe5"];
+                document.getElementById("TP5_TE").innerHTML = mark_details["tte5"];
+                document.getElementById("TP5_TOT").innerHTML = mark_details["tot5"];
+                document.getElementById("grade5").innerHTML = mark_details["grade5"];
+
+                document.getElementById("s6").innerHTML = mark_details["s6"];
+                document.getElementById("FP6_CE").innerHTML = mark_details["fce6"];
+                document.getElementById("FP6_PE").innerHTML = "--";
+                document.getElementById("FP6_TE").innerHTML = mark_details["fte6"];
+                document.getElementById("FP6_TOT").innerHTML = mark_details["ftot6"];
+                document.getElementById("SP6_CE").innerHTML = mark_details["sce6"];
+                document.getElementById("SP6_PE").innerHTML = mark_details["spe6"];
+                document.getElementById("SP6_TE").innerHTML = mark_details["ste6"];
+                document.getElementById("SP6_TOT").innerHTML = mark_details["stot6"];
+                document.getElementById("TP6_CE").innerHTML = mark_details["tce6"];
+                document.getElementById("TP6_PE").innerHTML = mark_details["tpe6"];
+                document.getElementById("TP6_TE").innerHTML = mark_details["tte6"];
+                document.getElementById("TP6_TOT").innerHTML = mark_details["tot6"];
+                document.getElementById("grade6").innerHTML = mark_details["grade6"];
+
+                document.getElementById("status").innerHTML = "Status :" + mark_details["status"];
+
+                if (mark_details["status"].trim() == "RESULT ANNOUNCED LATER")
+                    document.getElementById("status").innerHTML = "Status :RESULT WILL BE ANNOUNCED LATER";
+                document.getElementById("grace_mark").innerHTML = mark_details["grace"];
+            } else {
+                alert('Invalid Register Number');
+                location.href = 'index.html';
+            }
+        }
+    }
+    req.send("");
+    function getParameterByName(name, url) {
+        if (!url)
+            url = window.location.href;
+        name = name.replace(/[\[\]]/g, '\\$&');
+        var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+            results = regex.exec(url);
+        if (!results)
+            return null;
+        if (!results[2])
+            return '';
+        return decodeURIComponent(results[2].replace(/\+/g, ' '));
+    }
+    function GetFormattedDate(current_datetime) {
+        let formatted_date = current_datetime.getFullYear() + "-" + (current_datetime.getMonth() + 1) + "-" + current_datetime.getDate();
+        //alert(formatted_date);
+        return formatted_date;
+
+    }</script>
+<style>
+    @media only screen and (max-width: 400px) {
+
+        .flyout-table table,
+        .flyout-table th,
+        .flyout-table td,
+        .flyout-table tr {
+            display: block;
+        }
+    }
+
+    @media print {
+        .header {
+            display: none;
+        }
+
+        .footer {
+            display: none;
+        }
+
+        .links small button {
+            display: none;
+        }
+    }
+</style>
+
+</html>
