@@ -5,6 +5,10 @@ body{
   font-family: 'Open Sans', sans-serif;
 }
 
+a {
+  color: red;
+}
+
 .search {
   width: 100%;
   position: relative;
