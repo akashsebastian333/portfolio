@@ -17,7 +17,7 @@ a:hover {
 }
 
 p {
-    color: rgb(136, 146, 176);
+     color: rgb(136, 146, 176);
 }
 
 .title {
@@ -173,7 +173,8 @@ p {
     flex: 1;
 }
 
-.terminal-line {
+.terminal-line,
+.dummy-keyboard {
     position: relative;
     font-family: 'Anonymous Pro', monospace;
     font-size: .9rem;
@@ -198,10 +199,10 @@ p {
 }
 
 .dummy-keyboard {
-    opacity:0;
-    filter:alpha(opacity=0);
+    outline: none;
+    border: none;
+    background-color: transparent;
 }
-
 ::-webkit-scrollbar {
     display: none;
 }
