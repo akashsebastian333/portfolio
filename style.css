@@ -2,7 +2,6 @@ body {
     margin: 0;
     height: 100%;
 }
-
 body, footer, .hero-body {
     background-color: rgba(93,159,23,255) !important;
 }
