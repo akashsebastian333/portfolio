@@ -177,11 +177,11 @@ p {
     position: relative;
     font-family: 'Anonymous Pro', monospace;
     font-size: .9rem;
-    color: #b7c5d2;
+    color: #ffffff;
 }
 
 .directory {
-    color: #75e1e7;
+    color: #00f2ff;
     font-weight: 500;
 }
 
