@@ -17,7 +17,10 @@ const COMMANDS = {
     "unknown",
   resume: "<a href='./resume.pdf' class='success link'>resume.pdf</a>",
   experience: "No Experience😥",
-  acknowledges: 
+  ack: 
+    "<a href='https://bughunter.withgoogle.com/profile/c199d616-6cc3-4e90-a3e2-31e80f0ec1a2' class='success link'>Google Hall of Fame</a> , <a href='https://www.nokia.com/responsible-disclosure/' class='success link'>Nokia HOF</a> , <a href='https://dev.to/security' class='success link'>dev.to HOF</a> , <a href='https://bugcrowd.com/netflix' class='success link'>Netflix HOF</a> , <a href='https://bugcrowd.com/pinterest' class='success link'>Pinterest HOF</a> , <a href='https://www.philips.com/a-w/security/coordinated-vulnerability-disclosure/hall-of-honors.html' class='success link'>Philips HOF</a> , <a href='https://bugcrowd.com/soundcloud' class='success link'>Soundcloud HOF</a> , <a class='success link'>many more...</a>  ", 
+
+acknowledges: 
     "<a href='https://bughunter.withgoogle.com/profile/c199d616-6cc3-4e90-a3e2-31e80f0ec1a2' class='success link'>Google Hall of Fame</a> , <a href='https://www.nokia.com/responsible-disclosure/' class='success link'>Nokia HOF</a> , <a href='https://dev.to/security' class='success link'>dev.to HOF</a> , <a href='https://bugcrowd.com/netflix' class='success link'>Netflix HOF</a> , <a href='https://bugcrowd.com/pinterest' class='success link'>Pinterest HOF</a> , <a href='https://www.philips.com/a-w/security/coordinated-vulnerability-disclosure/hall-of-honors.html' class='success link'>Philips HOF</a> , <a href='https://bugcrowd.com/soundcloud' class='success link'>Soundcloud HOF</a> , <a class='success link'>many more...</a>  ", 
   contact:
     "You can contact me on any of following :<br><a href='https://t.me/akashsebastian' class='success link'>Telegram</a>, <a href='https://www.instagram.com/akashsebastian333/' class='success link'>Instagram</a>, <a href='https://www.twitter.com/akashseb/' class='success link'>Twitter</a>, <a href='mailto:mail@akashsebastian.com' class='success link'>Email</a>, <a href='https://api.whatsapp.com/send?phone=+919746626938' class='success link'>whatsapp</a>"
