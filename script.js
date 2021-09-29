@@ -15,7 +15,7 @@ const COMMANDS = {
     '<span class="code">Skill:</span>Pentesting, Programming, Bughunting...<br>',
   education:
     "unknown",
-  certificates: "<a href='https://www.akashsebastian.com/certificates' class='success link'>certificates</a>",
+  certificates: "<a href='https://www.akashsebastian.com/certificates.html' class='success link'>certificates</a>",
   resume: "<a href='./resume.pdf' class='success link'>resume.pdf</a>",
   experience: "No Experience😥",
   ack: 
