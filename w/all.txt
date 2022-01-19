@@ -5,6 +5,25 @@
 /api/geojson?url=file:///etc/passwd
 0.php
 0.res
+api
+access
+token
+.json
+admin
+aws
+.js
+config
+/v1
+/v2
+/v3
+/v n
+dashboard
+oauth
+url
+uri
+auth
+internal
+dev
 1
 100.php
 101.php
