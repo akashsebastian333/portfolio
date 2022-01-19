@@ -2,6 +2,7 @@
 00ebbfdc60999b54fdbf35a0699c3551b09a33b9.file.index.tpl.php
 04885805d2c6e064c2b145362c99e4adcc11ce47.file.search.tpl.php
 08ed091025f407cb757b6c832a4b61f6930556a2.file.links.tpl.php
+/etc/groovyconsole.html
 /api/geojson?url=file:///etc/passwd
 /trn-generator/Accesses.txt
 //trn-generator
