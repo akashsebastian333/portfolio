@@ -7660,3 +7660,10 @@ guest.pac
 /config/app_env.yml
 /config/database.yml
 /config/secrets.yml
+/proc/self/cwd/index.php
+/proc/self/cwd/main.py
+/etc/motd
+/proc/net/udp
+/proc/net/arp
+/proc/self/environ
+/var/run/secrets/kubernetes.io/serviceaccount
