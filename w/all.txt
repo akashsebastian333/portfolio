@@ -3,6 +3,7 @@
 /api/geojson?url=file:///etc/passwd
 /trn-generator/Accesses.txt
 //trn-generator
+/_wpeprivate/config.json
 DataServices.asmx
 0.php
 0.res
