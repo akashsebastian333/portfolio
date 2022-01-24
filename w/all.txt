@@ -4,6 +4,7 @@
 /etc/mysql/my.cnf
 /proc/sched_debug
 .bash_history
+app_dev.php
 /accesslogs/
 /etc/groovyconsole.html
 /api/geojson?url=file:///etc/passwd
