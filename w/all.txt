@@ -3,6 +3,7 @@
 /etc/motd
 /etc/mysql/my.cnf
 /proc/sched_debug
+_profiler
 .bash_history
 app_dev.php
 /accesslogs/
