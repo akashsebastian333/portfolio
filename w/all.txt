@@ -1,4 +1,16 @@
 /proc/cmdline
+/.git
+/.git-rewrite
+/.git/HEAD
+/.git/index
+/.git/logs
+/.gitattributes
+/.gitconfig
+/.gitkeep
+/.gitmodules
+/.gitreview
+/.svn/entries
+/.svnignore
 /proc/mounts
 /etc/motd
 /etc/mysql/my.cnf
