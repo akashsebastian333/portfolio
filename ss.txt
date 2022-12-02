@@ -1,0 +1,12 @@
+www
+mail
+ftp
+localhost
+webmail
+smtp
+pop
+ns1
+webdisk
+ns2
+test
+dev
