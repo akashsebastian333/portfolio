@@ -1,4 +1,4 @@
-ww
+www
 mail
 ftp
 localhost
