@@ -1,13 +1,19 @@
 <html>
     <head>
         <title>Clickjacking / framing test</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+        <style>
+            body {
+                background-color: rgba(93, 159, 23, 255) !important;
+            }
+        </style>
         <script type="text/javascript" src="clickjack.js"></script>
     </head>
     <body>
         <h1>Test a page for clickjacking/framing vulnerability</h1>
         <p>Enter the URL to frame:</p>
         <input id="url" type="text" value="http://example.com"></input>
-        <button id="submit-test">Test it!</button>
+        <button id="submit-test" class="btn btn-primary">Test it!</button>
         <br />
         <iframe src="about:blank" id="iframe" width="1000px" height="800px"></iframe>
     </body>
