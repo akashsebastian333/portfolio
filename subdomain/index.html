@@ -1,0 +1,58 @@
+  <head>
+    <title>Subdomain Finder</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <style>
+      body {
+        background-color: #d4edda;
+      }
+		
+	#result p {
+        font-weight: bold;
+      }
+
+    </style>
+  </head>
+
+<div class="container">
+    <h1 class="text-center">Subdomain Finder</h1>
+    <p>Enter a domain name:</p>
+    <form id="form" class="form-inline">
+        <br><input type="text" id="domain" name="domain" class="form-control mb-2 mr-sm-2" placeholder="example.com">
+        <button type="submit" class="btn btn-primary mb-2">Search</button>
+    </form>
+</div>
+
+<div id="hacktarget" class="mt-2"></div>
+
+<script>
+
+const form = document.getElementById("form");
+form.addEventListener("submit", event => {
+  event.preventDefault();
+
+  if (form.disabled) { 
+    return;
+  }
+  form.disabled = true;
+
+  const domain = document.getElementById("domain").value;
+  fetch(`https://api.hackertarget.com/hostsearch/?q=${domain}`)
+    .then(response => response.text())
+    .then(text => {
+      const lines = text.split("\n");
+      const resultsDiv = document.getElementById("hacktarget");
+      for (const line of lines) {
+        const parts = line.split(",");
+        if (parts.length >= 2) {
+          const domain = parts[0];
+          const textNode = document.createTextNode(domain);
+          const newLine = document.createElement("br");
+          resultsDiv.appendChild(textNode);
+          resultsDiv.appendChild(newLine);
+        }
+      }
+    });
+});
+      
+
+</script>
