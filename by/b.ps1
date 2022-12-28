@@ -2,7 +2,6 @@ Write-Host "-- AMSI Patch"
 Write-Host "-- Modified By: Shantanu Khandelwal (@shantanukhande)"
 Write-Host "-- Original Author: Paul Laîné (@am0nsec)"
 Write-Host ""
-
 Class Hunter {
     static [IntPtr] FindAddress([IntPtr]$address, [byte[]]$egg) {
         while ($true) {
