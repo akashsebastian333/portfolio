@@ -1,20 +1,20 @@
 Class Hunter {
-    static [IntPtr] FindAddress([IntPtr]$mickey, [byte[]]$tom) {
+    static [IntPtr] FindAddress([IntPtr]$address, [byte[]]$egg) {
         while ($true) {
             [int]$count = 0
 
             while ($true) {
-                [IntPtr]$mickey = [IntPtr]::Add($mickey, 1)
-                If ([System.Runtime.InteropServices.Marshal]::ReadByte($mickey) -eq $tom.Get($count)) {
+                [IntPtr]$address = [IntPtr]::Add($address, 1)
+                If ([System.Runtime.InteropServices.Marshal]::ReadByte($address) -eq $egg.Get($count)) {
                     $count++
-                    If ($count -eq $tom.Length) {
-                        return [IntPtr]::Subtract($mickey, $tom.Length - 1)
+                    If ($count -eq $egg.Length) {
+                        return [IntPtr]::Subtract($address, $egg.Length - 1)
                     }
                 } Else { break }
             }
         }
 
-        return $mickey
+        return $address
     }
 }
 
