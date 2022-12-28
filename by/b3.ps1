@@ -19,8 +19,6 @@ Class Hunter {
 }
 
 
-
-
 function Get-ProcAddress {
     Param(
         [Parameter(Position = 0, Mandatory = $True)] [String] $thor,
