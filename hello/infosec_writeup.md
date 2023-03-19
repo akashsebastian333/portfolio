@@ -6,7 +6,7 @@
 
 ![](Files/pigpen.png)
 
-Given cipher is a pigpen Cipher, Simply decode it using [Pigpen Cipher Decoder]
+it was Pigpen decode it using [Pigpen Cipher Decoder]
 
 `FLAG{EASYASONETWOTHREE}`
 
