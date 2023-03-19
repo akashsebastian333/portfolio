@@ -1,16 +1,14 @@
 # InfoSec CTF Writeup
 
-Author : Akash Sebastian<br>
-Cyber Talents Profile : https://cybertalents.com/members/AkashSeb/profile <br>
 
 ## Silly Freemason
 ---
 
 ![](Files/pigpen.png)
 
-Given cipher is a pigpen Cipher, Simply decode it using [Pigpen Cipher Decoder](https://www.boxentriq.com/code-breaking/pigpen-cipher)
+Given cipher is a pigpen Cipher, Simply decode it using [Pigpen Cipher Decoder]
 
-Flag : `FLAG{EASYASONETWOTHREE}`
+`FLAG{EASYASONETWOTHREE}`
 
 ## G(OLD)
 ---
