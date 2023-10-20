@@ -8,9 +8,12 @@ body {
     text-align: center;
 }
 
-img {
-    max-width: 100px;
-    margin-bottom: 20px;
+.company-heading {
+    background-image: url(https://cdn-resources.highradius.com/resources/wp-content/uploads/2021/10/HighRadius-Trifecta-2020.svg);
+    background-size: contain;
+    background-repeat: no-repeat;
+    height: 100px; /* Adjust the height as needed */
+    text-indent: -9999px; /* Hide text for accessibility */
 }
 
 form {
