@@ -1,0 +1,17 @@
+SET SERVEROUTPUT ON;
+
+DECLARE
+    N NUMBER;
+    M NUMBER;
+
+    PROCEDURE findsquare(x IN NUMBER, y OUT NUMBER) IS
+    BEGIN
+        y := x * x;
+    END findsquare;
+
+BEGIN
+    N := &n;
+    findsquare(N, M);
+    DBMS_OUTPUT.PUT_LINE('The square of ' || N || ' is ' || M);
+END;
+/
