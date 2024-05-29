@@ -1,8 +1,4 @@
-CREATE OR REPLACE PROCEDURE insert_emp (
-    x NUMBER,
-    name VARCHAR2
-)
-IS
+CREATE OR REPLACE PROCEDURE insert_emp(x NUMBER,name VARCHAR2) IS
 BEGIN
     INSERT INTO emp (id, firstname) VALUES (x, name);
 END;
