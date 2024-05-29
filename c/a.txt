@@ -1,0 +1,37 @@
+db.employees.insertMany([
+    { name: "Alice", department: "HR", salary: 50000 },
+    { name: "Bob", department: "HR", salary: 55000 },
+    { name: "Charlie", department: "IT", salary: 60000 },
+    { name: "David", department: "IT", salary: 70000 },
+    { name: "Mohan", department: "Sales", salary: 45000 },
+    { name: "Bhuvan", department: "Sales", salary: 47000 }
+]);
+
+
+db.employees.aggregate([
+    {
+        $group: {
+            _id: "$department",
+            averageSalary: { $avg: "$salary" }
+        }
+    }
+]);
+
+
+db.employees.aggregate([
+    {
+        $group: {
+            _id: "$department",
+            minSalary: { $min: "$salary" },
+            maxSalary: { $max: "$salary" }
+        }
+    }
+]);
+
+
+db.employees.find().sort({ salary: 1 });
+
+
+db.employees.createIndex({ name: "text" });
+
+db.employees.find({ $text: { $search: "Mohan Bhuvan" } });
