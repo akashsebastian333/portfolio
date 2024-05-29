@@ -1,0 +1,20 @@
+CREATE OR REPLACE PROCEDURE insert_emp (
+    x NUMBER,
+    name VARCHAR2
+)
+IS
+BEGIN
+    INSERT INTO emp (id, firstname) VALUES (x, name);
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE insert_num (
+    x NUMBER
+)
+IS
+BEGIN
+    INSERT INTO emp (id, firstname) VALUES (x, 'user');
+END;
+/
+
