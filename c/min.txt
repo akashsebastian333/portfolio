@@ -1,0 +1,23 @@
+SET SERVEROUTPUT ON;
+
+DECLARE
+    N1 NUMBER;
+    N2 NUMBER;
+    M NUMBER;
+
+    PROCEDURE findmin(x IN NUMBER, y IN NUMBER, z OUT NUMBER) IS
+    BEGIN
+        IF x < y THEN
+            z := x;
+        ELSE
+            z := y;
+        END IF;
+    END findmin;
+
+BEGIN
+    N1 := &n1;
+    N2 := &n2;
+    findmin(N1, N2, M);
+    DBMS_OUTPUT.PUT_LINE('The minimum value between ' || N1 || ' and ' || N2 || ' is ' || M);
+END;
+/
