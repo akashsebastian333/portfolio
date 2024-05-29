@@ -1,0 +1,4 @@
+use my_database
+db.createCollection("my_collection")
+db.my_collection.insertOne({name: "Alice",age: 30,city: "New York"})
+db.my_collection.insertMany([{ name: "Bob", age: 25, city: "San Francisco" }, { name: "Charlie", age: 28, city: "Los Angeles" }, { name: "David", age: 35, city: "Chicago" }])
