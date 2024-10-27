@@ -5,125 +5,137 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AZ-Test</title>
     <style>
-        body {
-            font-family: Courier, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #303030;
-            color: #ffffff;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #505050;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
-        }
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #FFFFFF;
-        }
-        h3 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #FFFFFF;
-        }
-        label {
-            font-weight: bold;
-        }
-        input[type="text"]{
-            padding: 8px;
-            font-size: 14px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            background-color: #fff;
-            width: 100%; 
-            max-width: 400px; 
-        }
-        input[type="submit"],
-        textarea,
-        select {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        input[type="file"] {
-            padding: 5px;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #357EC7;
-            color: #000;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #B4CFEC;
-        }
-        .response {
-            border: 1px solid #ccc;
-            padding: 4px;
-            border-radius: 4px;
-            background-color: #303030;
-            white-space: pre-wrap;
-        }
+/* Base Styles */
+body {
+    font-family: 'Courier New', Courier, monospace;
+    margin: 0;
+    padding: 0;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    background: linear-gradient(145deg, #333333, #1a1a1a);
+    border-radius: 12px;
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.4);
+    color: #ffffff;
+}
+
+/* Header Styles */
+h1, h3 {
+    text-align: center;
+    color: #00bfff;
+    text-shadow: 0px 0px 8px rgba(0, 191, 255, 0.6);
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+}
+
+/* Form Styles */
+label {
+    font-weight: bold;
+    color: #00bfff;
+}
+
+input[type="text"],
+input[type="file"],
+textarea,
+select,
+button {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    margin-bottom: 10px;
+    background-color: #2e2e2e;
+    color: #00ffcc;
+    transition: all 0.3s ease-in-out;
+}
+
+input[type="text"]:focus,
+textarea:focus,
+select:focus,
+button:focus {
+    outline: none;
+    background-color: #444;
+    box-shadow: 0px 0px 10px #00bfff;
+}
+
+/* Button Hover and Active State */
+button {
+    background-color: #007bff;
+    color: #1a1a1a;
+    font-weight: bold;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+button:hover {
+    background-color: #00bfff;
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 191, 255, 0.4);
+}
+
+/* Card Styles */
 .item-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
 }
 
 .item-card {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 10px;
-  width: 200px;
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    background: #333;
+    border-radius: 12px;
+    padding: 16px;
+    width: 220px;
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
 }
 
 .item-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 8px 16px rgba(0, 191, 255, 0.4);
 }
 
 .item-thumbnail {
-  max-width: 100%;
-  height: auto;
-  border-radius: 4px;
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 10px;
 }
 
 .item-title {
-  font-size: 18px;
-  font-weight: bold;
-  margin: 8px 0;
+    font-size: 20px;
+    font-weight: bold;
+    color: #00bfff;
+    text-align: center;
 }
 
 .item-description {
-  font-size: 14px;
-  color: #666;
+    font-size: 14px;
+    color: #aaaaaa;
+    text-align: center;
 }
 
 .item-action {
-  display: inline-block;
-  padding: 6px 12px;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  text-decoration: none;
-  font-size: 14px;
-  transition: background-color 0.2s ease-in-out;
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #00bfff;
+    color: #1a1a1a;
+    text-decoration: none;
+    border-radius: 8px;
+    text-align: center;
+    transition: background-color 0.3s ease-in-out;
 }
 
 .item-action:hover {
-  background-color: #0056b3;
+    background-color: #0077cc;
 }
+
 /* Email Viewer Styles */
 .email-controls {
     display: flex;
@@ -133,222 +145,125 @@
 }
 
 .search-input {
-    flex: 1;
     padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 0px;
-    font-size: 14px;
-    margin-right: 10px;
+    background-color: #2e2e2e;
+    color: #00ffcc;
+    border: none;
+    border-radius: 8px;
+    transition: box-shadow 0.3s ease-in-out;
     max-width: 40%;
+}
+
+.search-input:focus {
+    outline: none;
+    box-shadow: 0px 0px 10px #00bfff;
 }
 
 .search-button {
     padding: 10px 20px;
-    background-color: #357EC7;
-    color: #000;
+    background-color: #00bfff;
+    color: #1a1a1a;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .search-button:hover {
-    background-color: #B4CFEC;
+    background-color: #00ffcc;
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 255, 204, 0.4);
 }
 
+/* Email List Styles */
 .email-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
-    gap: 8px;
+    gap: 10px;
 }
 
 .email-summary {
-    padding: 10px;
-    border: 1px solid #ccc;
-    background-color: #303030;
-    border-radius: 4px;
+    background-color: #2e2e2e;
+    border-radius: 8px;
+    padding: 12px;
     cursor: pointer;
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    transition: box-shadow 0.3s, transform 0.3s;
+    color: #00ffcc;
 }
 
 .email-summary:hover {
+    box-shadow: 0 8px 16px rgba(0, 191, 255, 0.4);
     transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .email-detail {
-    margin-top: 20px;
-    padding: 4px;
-    border: 1px solid #ccc;
-    background-color: #dddddd;
-    border-radius: 4px;
-    color: #000000;
-}
-
-.email-detail h3 {
-    margin-bottom: 10px;
-    color: #000000;
-}
-
-.email-detail strong {
-    font-weight: bold;
-}
-
-.email-detail p {
-    margin: 10px 0;
-    font-size: 14px;
-    color: #FFFFFF;
+    background-color: #1a1a1a;
+    padding: 20px;
+    border-radius: 8px;
+    color: #ffffff;
 }
 
 .email-detail a {
-    color: #B0E0E6;
-    text-decoration: none;
-    transition: color 0.2s ease-in-out;
+    color: #00bfff;
 }
 
 .email-detail a:hover {
-    color: #0056b3;
-}
-select#httpMethod {
-    padding: 8px;
-    font-size: 14px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    background-color: #fff;
-    width: 100%; 
-    max-width: 80px; 
-}
-#chatViewer {
-    margin-bottom: 20px;
+    color: #00ffcc;
 }
 
-.chat-summary {
-    border: 1px solid #ccc;
+/* Chat Viewer Styles */
+.chat-summary,
+.sharepoint-drive-summary,
+.sharepoint-item-summary {
+    background-color: #2e2e2e;
     border-radius: 8px;
-    padding: 10px;
-    width: 100%;
-    background-color: #303030;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    padding: 16px;
     cursor: pointer;
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    color: #00ffcc;
     margin-bottom: 10px;
 }
 
-.chat-summary:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.chat-summary:hover,
+.sharepoint-drive-summary:hover,
+.sharepoint-item-summary:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 8px 16px rgba(0, 191, 255, 0.4);
 }
 
 #chatMessages {
-    border: 1px solid #ccc;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border-radius: 4px;
-    margin-top: 20px;
-    color: #000000;
-}
-.message {
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin-bottom: 10px;
-    padding: 10px;
-    background-color: #f9f9f9;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.message-header {
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.message-content {
-    margin-top: 5px;
-}
-
-/* Style for image attachments */
-.message-content img {
-    max-width: 100%;
-    height: auto;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin-top: 5px;
-}
-
-/* Style for file links */
-.message-content a {
-    color: #007bff;
-    text-decoration: none;
-    transition: color 0.2s ease-in-out;
-}
-
-.message-content a:hover {
-    color: #0056b3;
-}
- .file-card {
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin: 10px 0;
-    background-color: #f9f9f9;
-    border-radius: 5px;
-    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .file-name {
-    font-weight: bold;
-    color: #333;
-  }
-
-  .file-details {
-    margin-top: 5px;
-    font-size: 14px;
-    color: #666;
-  }
-
-  .file-link {
-    color: #007bff;
-    text-decoration: none;
-  }
-  .item-name {
-    font-weight: bold;
-    color: #333;
-  }
-
-  .item-details {
-    margin-top: 5px;
-    font-size: 14px;
-    color: #666;
-  }
-  .sharepoint-drive-summary {
-    border: 1px solid #ccc;
+    background-color: #1a1a1a;
     border-radius: 8px;
-    padding: 10px;
-    width: 100%;
-    background-color: #303030;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    cursor: pointer;
-    margin-bottom: 10px;
+    padding: 20px;
+    color: #ffffff;
 }
 
-.sharepoint-drive-summary:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-.sharepoint-item-summary {
-    border: 1px solid #ccc;
+/* Additional Element Styling */
+.file-card, .message {
+    background-color: #1a1a1a;
+    color: #00ffcc;
     border-radius: 8px;
-    padding: 10px;
-    width: 100%;
-    background-color: #303030;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    cursor: pointer;
-    margin-bottom: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: box-shadow 0.3s ease;
 }
 
-.sharepoint-item-summary:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.file-card:hover, .message:hover {
+    box-shadow: 0 8px 16px rgba(0, 191, 255, 0.4);
 }
+
+.file-link, .message-content a {
+    color: #00bfff;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.file-link:hover, .message-content a:hover {
+    color: #00ffcc;
+}
+
     </style>
 </head>
 <body>
