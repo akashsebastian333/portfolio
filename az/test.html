@@ -7,28 +7,36 @@
     <style>
 /* Base Styles */
 body {
-    font-family: 'Courier New', Courier, monospace;
+    font-family: 'Roboto', sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #1a1a1a;
+    background: linear-gradient(120deg, #0d0d0d, #002b36, #00ff99);
+    background-size: 600% 600%;
+    animation: gradientAnimation 15s ease infinite;
     color: #e0e0e0;
+}
+
+@keyframes gradientAnimation {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 .container {
     max-width: 1000px;
     margin: 0 auto;
     padding: 20px;
-    background: linear-gradient(145deg, #333333, #1a1a1a);
+    background: rgba(30, 30, 30, 0.85);
     border-radius: 12px;
-    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.4);
     color: #ffffff;
 }
 
 /* Header Styles */
 h1, h3 {
     text-align: center;
-    color: #00bfff;
-    text-shadow: 0px 0px 8px rgba(0, 191, 255, 0.6);
+    color: #00ff99;
+    text-shadow: 0px 0px 10px rgba(0, 255, 153, 0.6), 0px 0px 15px rgba(0, 255, 153, 0.4);
     font-weight: bold;
     letter-spacing: 2px;
     margin-bottom: 20px;
@@ -37,7 +45,7 @@ h1, h3 {
 /* Form Styles */
 label {
     font-weight: bold;
-    color: #00bfff;
+    color: #00cc66;
 }
 
 input[type="text"],
@@ -45,14 +53,15 @@ input[type="file"],
 textarea,
 select,
 button {
-    padding: 10px;
-    border-radius: 8px;
+    padding: 12px;
+    border-radius: 10px;
     border: none;
-    font-size: 14px;
+    font-size: 16px;
     margin-bottom: 10px;
-    background-color: #2e2e2e;
-    color: #00ffcc;
+    background-color: #2a2a2a;
+    color: #66ff99;
     transition: all 0.3s ease-in-out;
+    box-shadow: inset 0px 0px 6px #00ff99;
 }
 
 input[type="text"]:focus,
@@ -60,22 +69,23 @@ textarea:focus,
 select:focus,
 button:focus {
     outline: none;
-    background-color: #444;
-    box-shadow: 0px 0px 10px #00bfff;
+    background-color: #3b3b3b;
+    box-shadow: 0px 0px 15px #00cc66, inset 0px 0px 8px #00ff99;
 }
 
 /* Button Hover and Active State */
 button {
-    background-color: #007bff;
-    color: #1a1a1a;
+    background-color: #00ff99;
+    color: #ffffff;
     font-weight: bold;
-    transition: background-color 0.3s, transform 0.2s;
+    transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+    box-shadow: 0 6px 15px rgba(0, 255, 153, 0.4);
 }
 
 button:hover {
-    background-color: #00bfff;
-    transform: scale(1.05);
-    box-shadow: 0 8px 16px rgba(0, 191, 255, 0.4);
+    background-color: #00cc66;
+    transform: scale(1.08);
+    box-shadow: 0 10px 20px rgba(0, 204, 102, 0.5);
 }
 
 /* Card Styles */
@@ -87,18 +97,19 @@ button:hover {
 }
 
 .item-card {
-    background: #333;
+    background: rgba(45, 45, 45, 0.9);
     border-radius: 12px;
-    padding: 16px;
+    padding: 20px;
     width: 220px;
     transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
     cursor: pointer;
+    color: #e0e0e0;
 }
 
 .item-card:hover {
-    transform: translateY(-10px) scale(1.02);
-    box-shadow: 0 8px 16px rgba(0, 191, 255, 0.4);
+    transform: translateY(-10px) scale(1.05);
+    box-shadow: 0 10px 20px rgba(0, 255, 153, 0.5);
 }
 
 .item-thumbnail {
@@ -111,7 +122,7 @@ button:hover {
 .item-title {
     font-size: 20px;
     font-weight: bold;
-    color: #00bfff;
+    color: #66ff99;
     text-align: center;
 }
 
@@ -123,17 +134,18 @@ button:hover {
 
 .item-action {
     display: inline-block;
-    padding: 8px 16px;
-    background-color: #00bfff;
-    color: #1a1a1a;
+    padding: 10px 18px;
+    background-color: #00cc66;
+    color: #ffffff;
     text-decoration: none;
-    border-radius: 8px;
+    border-radius: 10px;
     text-align: center;
     transition: background-color 0.3s ease-in-out;
 }
 
 .item-action:hover {
-    background-color: #0077cc;
+    background-color: #66ff99;
+    box-shadow: 0 6px 10px rgba(102, 255, 153, 0.5);
 }
 
 /* Email Viewer Styles */
@@ -145,9 +157,9 @@ button:hover {
 }
 
 .search-input {
-    padding: 10px;
-    background-color: #2e2e2e;
-    color: #00ffcc;
+    padding: 12px;
+    background-color: #3b3b3b;
+    color: #00cc66;
     border: none;
     border-radius: 8px;
     transition: box-shadow 0.3s ease-in-out;
@@ -156,13 +168,13 @@ button:hover {
 
 .search-input:focus {
     outline: none;
-    box-shadow: 0px 0px 10px #00bfff;
+    box-shadow: 0px 0px 10px #66ff99, 0px 0px 15px rgba(0, 255, 153, 0.5);
 }
 
 .search-button {
-    padding: 10px 20px;
-    background-color: #00bfff;
-    color: #1a1a1a;
+    padding: 12px 24px;
+    background-color: #00ff99;
+    color: #ffffff;
     border: none;
     border-radius: 8px;
     cursor: pointer;
@@ -171,9 +183,9 @@ button:hover {
 }
 
 .search-button:hover {
-    background-color: #00ffcc;
+    background-color: #00cc66;
     transform: scale(1.05);
-    box-shadow: 0 8px 16px rgba(0, 255, 204, 0.4);
+    box-shadow: 0 10px 20px rgba(0, 204, 102, 0.4);
 }
 
 /* Email List Styles */
@@ -184,85 +196,86 @@ button:hover {
 }
 
 .email-summary {
-    background-color: #2e2e2e;
-    border-radius: 8px;
-    padding: 12px;
+    background-color: #3b3b3b;
+    border-radius: 10px;
+    padding: 15px;
     cursor: pointer;
     transition: box-shadow 0.3s, transform 0.3s;
-    color: #00ffcc;
+    color: #66ff99;
 }
 
 .email-summary:hover {
-    box-shadow: 0 8px 16px rgba(0, 191, 255, 0.4);
+    box-shadow: 0 10px 20px rgba(0, 255, 153, 0.4);
     transform: translateY(-5px);
 }
 
 .email-detail {
-    background-color: #1a1a1a;
-    padding: 20px;
-    border-radius: 8px;
+    background-color: #2e2e2e;
+    padding: 25px;
+    border-radius: 10px;
     color: #ffffff;
 }
 
 .email-detail a {
-    color: #00bfff;
+    color: #00cc66;
 }
 
 .email-detail a:hover {
-    color: #00ffcc;
+    color: #66ff99;
 }
 
 /* Chat Viewer Styles */
 .chat-summary,
 .sharepoint-drive-summary,
 .sharepoint-item-summary {
-    background-color: #2e2e2e;
-    border-radius: 8px;
-    padding: 16px;
+    background-color: #3b3b3b;
+    border-radius: 10px;
+    padding: 20px;
     cursor: pointer;
     transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-    color: #00ffcc;
+    color: #66ff99;
     margin-bottom: 10px;
 }
 
 .chat-summary:hover,
 .sharepoint-drive-summary:hover,
 .sharepoint-item-summary:hover {
-    transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 8px 16px rgba(0, 191, 255, 0.4);
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 10px 20px rgba(0, 255, 153, 0.4);
 }
 
 #chatMessages {
-    background-color: #1a1a1a;
-    border-radius: 8px;
-    padding: 20px;
+    background-color: #2e2e2e;
+    border-radius: 10px;
+    padding: 25px;
     color: #ffffff;
 }
 
 /* Additional Element Styling */
 .file-card, .message {
-    background-color: #1a1a1a;
-    color: #00ffcc;
-    border-radius: 8px;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
-    padding: 16px;
+    background-color: #2e2e2e;
+    color: #66ff99;
+    border-radius: 10px;
+    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.4);
+    padding: 18px;
     margin-bottom: 12px;
     transition: box-shadow 0.3s ease;
 }
 
 .file-card:hover, .message:hover {
-    box-shadow: 0 8px 16px rgba(0, 191, 255, 0.4);
+    box-shadow: 0 10px 20px rgba(102, 255, 153, 0.4);
 }
 
 .file-link, .message-content a {
-    color: #00bfff;
+    color: #00cc66;
     text-decoration: none;
     transition: color 0.3s;
 }
 
 .file-link:hover, .message-content a:hover {
-    color: #00ffcc;
+    color: #66ff99;
 }
+
 
     </style>
 </head>
