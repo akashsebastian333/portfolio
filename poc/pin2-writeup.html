@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Write-up – Cross-site account deactivation via ask.pinterest.com proxy</title>
+<title>Write-up - Cross-site account deactivation via ask.pinterest.com proxy</title>
 <style>
   :root{
     --bg:#0d1117; --panel:#161b22; --panel2:#1c2129; --border:#30363d;
@@ -83,16 +83,16 @@
 </p>
 
 <div class="step">
-  <h3>Step 1 – the attacker page confirms the victim is logged in</h3>
+  <h3>Step 1 - the attacker page confirms the victim is logged in</h3>
   <p>The page probes the proxy's read side through a JSONP script tag. It receives the victim's username, id and full name in a script-wrapped response it can read from a foreign origin.</p>
   <figure class="shot">
     <img src="pin2/01_poc_loggedin_before.png" alt="PoC step 1">
-    <figcaption>01 &middot; https://www.akashsebastian.com/poc/pin-csrf-deactivate.html – step 1 returned the live account (pinhunt1688259527) before the attack fired</figcaption>
+    <figcaption>01 &middot; https://www.akashsebastian.com/poc/pin-csrf-deactivate.html - step 1 returned the live account (pinhunt1688259527) before the attack fired</figcaption>
   </figure>
 </div>
 
 <div class="step">
-  <h3>Step 2 – the page fires the cross-site POST</h3>
+  <h3>Step 2 - the page fires the cross-site POST</h3>
   <p>A plain HTML form POSTs to the proxy endpoint into a hidden iframe. The browser attaches the victim's Pinterest cookies because they are SameSite=None. The proxy executes v3_deactivate_user with the victim's session.</p>
   <figure class="shot">
     <img src="pin2/02_poc_fired.png" alt="PoC step 2">
@@ -101,7 +101,7 @@
 </div>
 
 <div class="step">
-  <h3>Step 3 – the account is gone</h3>
+  <h3>Step 3 - the account is gone</h3>
   <p>The page re-reads the account the same way it did in step 1. The proxy now rejects the session: the authentication error body has no callback wrapper, the read fails. Seconds earlier the same request returned the full profile.</p>
   <figure class="shot">
     <img src="pin2/03_poc_result.png" alt="PoC step 3">
@@ -110,7 +110,7 @@
 </div>
 
 <div class="step">
-  <h3>Step 4 – the victim's own browser is logged out</h3>
+  <h3>Step 4 - the victim's own browser is logged out</h3>
   <p>Navigating to the account settings page now lands on a logged-out home feed. Pinterest also emails the account owner a "Your Pinterest account is deactivated" notice, which is the victim's only signal that anything happened.</p>
   <figure class="shot">
     <img src="pin2/04_www_after_deactivation.png" alt="PoC step 4">
