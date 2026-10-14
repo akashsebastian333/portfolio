@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Write-up &mdash; Cross-site account deactivation via ask.pinterest.com proxy</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2129; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#3fb950; --red:#f85149;
+    --amber:#ffa657; --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .wrap{max-width:920px;margin:0 auto;padding:36px 20px 80px}
+  header{border-bottom:1px solid var(--border);padding-bottom:22px;margin-bottom:30px}
+  .tag{display:inline-block;font:600 11px/1 var(--mono);letter-spacing:.8px;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:4px 9px;margin-bottom:16px;text-transform:uppercase}
+  h1{font-size:24px;line-height:1.3;margin:0 0 10px;font-weight:700}
+  .lede{color:var(--muted);font-size:15px;max-width:780px}
+  h2{font-size:17px;margin:34px 0 10px;font-weight:700}
+  p{margin:0 0 14px;color:var(--text)}
+  .muted{color:var(--muted)}
+  code{font-family:var(--mono);background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:12.5px}
+  pre{background:#0a0d12;border:1px solid var(--border);border-radius:8px;padding:14px 16px;font:12.5px/1.6 var(--mono);color:#c9d1d9;overflow-x:auto;margin:0 0 18px}
+  .shot{margin:18px 0 30px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .shot img{display:block;width:100%;height:auto}
+  .shot figcaption{padding:10px 14px;background:var(--panel);border-top:1px solid var(--border);color:var(--muted);font:12.5px/1.5 var(--mono)}
+  .callout{border-left:3px solid var(--red);background:rgba(248,81,73,.05);padding:14px 18px;margin:0 0 18px;border-radius:0 8px 8px 0}
+  .ok{border-left-color:var(--green);background:rgba(63,185,80,.05)}
+  .amber{border-left-color:var(--amber);background:rgba(255,166,87,.05)}
+  .step{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin:0 0 16px}
+  .step h3{margin:0 0 8px;font-size:14.5px;font-weight:700;color:var(--accent)}
+  .step p{font-size:13.5px;margin:0 0 10px}
+  table{border-collapse:collapse;width:100%;margin:0 0 20px;font-size:13px}
+  th,td{border:1px solid var(--border);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:var(--panel);color:var(--muted);font:600 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.5px}
+  footer{margin-top:44px;color:var(--muted);font:12px/1.7 var(--mono);border-top:1px solid var(--border);padding-top:18px}
+  .req{font:12px/1.6 var(--mono);color:#c9d1d9;background:#0a0d12;border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:12px;white-space:nowrap;overflow-x:auto}
+  .req .m{color:var(--green)} .req .u{color:var(--accent)} .req .c{color:#d2a8ff}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <span class="tag">Write-up &middot; CSRF &middot; destructive write &middot; one page visit</span>
+  <h1>Cross-site account deactivation of a logged-in Pinterest user</h1>
+  <p class="lede">
+    Ask Pinterest (<code>ask.pinterest.com</code>) proxies requests to Pinterest's internal v3 API using the visitor's
+    session cookies. The proxy performs write operations with no CSRF token, no Origin or Referer check, and no
+    content-type restriction. Any website can therefore order the proxy to run <code>v3_deactivate_user</code>
+    with the victim's session. One visit to an attacker page permanently deactivates the victim's account.
+  </p>
+</header>
+
+<h2>What the proxy is</h2>
+<p>
+  <code>ask.pinterest.com</code> is Pinterest's AI assistant app. Its frontend calls its own backend at
+  <code>/api/proxy/pinterest/&lt;path&gt;</code>, and that backend forwards the request to the Pinterest v3 API gateway
+  <em>with the visitor's Pinterest cookies attached</em> (authentication mode <code>pinterest_session</code>).
+  The same call through the official <code>www.pinterest.com</code> relay requires an <code>X-CSRFToken</code> header.
+  The ask proxy skips that layer entirely.
+</p>
+<div class="req"><span class="m">POST</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/me/</span> &nbsp;<span class="c">first_name=Stag</span></div>
+<p>
+  That single request maps to the gateway handler <code>v3_deactivate_user</code> and permanently deactivates the
+  account of whoever's cookies were sent. The attacker needs no password, no token, and no interaction from the victim
+  beyond visiting a page.
+</p>
+
+<h2>Why the browser sends the victim's cookies</h2>
+<p>
+  Pinterest session cookies (<code>_pinterest_sess</code>, <code>__Secure-s_a</code>) are set with
+  <code>SameSite=None; Secure</code> on the <code>.pinterest.com</code> domain. <code>ask.pinterest.com</code> is a
+  subdomain of that domain, so a cross-site form POST from any origin carries the victim's session cookies to the
+  proxy automatically. It is a CORS simple request: no preflight, so nothing is inspected before execution.
+</p>
+
+<h2>The live demo</h2>
+<p>
+  The PoC page is hosted on <b>akashsebastian.com</b>, a domain that has nothing to do with Pinterest, and was run
+  against a test account I own while logged in to that browser. The attacker version of the page submits the form
+  automatically on load. The hosted copy has a one-click interlock so a stray visitor cannot destroy a real account.
+</p>
+
+<div class="step">
+  <h3>Step 1 &mdash; the attacker page confirms the victim is logged in</h3>
+  <p>The page probes the proxy's read side through a JSONP script tag. It receives the victim's username, id and full name in a script-wrapped response it can read from a foreign origin.</p>
+  <figure class="shot">
+    <img src="pin2/01_poc_loggedin_before.png" alt="PoC step 1">
+    <figcaption>01 &middot; https://www.akashsebastian.com/poc/pin-csrf-deactivate.html &mdash; step 1 returned the live account (pinhunt1688259527) before the attack fired</figcaption>
+  </figure>
+</div>
+
+<div class="step">
+  <h3>Step 2 &mdash; the page fires the cross-site POST</h3>
+  <p>A plain HTML form POSTs to the proxy endpoint into a hidden iframe. The browser attaches the victim's Pinterest cookies because they are SameSite=None. The proxy executes v3_deactivate_user with the victim's session.</p>
+  <figure class="shot">
+    <img src="pin2/02_poc_fired.png" alt="PoC step 2">
+    <figcaption>02 &middot; the POST has been sent with the victim's cookies; the account data from step 1 is still on screen</figcaption>
+  </figure>
+</div>
+
+<div class="step">
+  <h3>Step 3 &mdash; the account is gone</h3>
+  <p>The page re-reads the account the same way it did in step 1. The proxy now rejects the session: the authentication error body has no callback wrapper, the read fails. Seconds earlier the same request returned the full profile.</p>
+  <figure class="shot">
+    <img src="pin2/03_poc_result.png" alt="PoC step 3">
+    <figcaption>03 &middot; verdict: CONFIRMED, account deactivated by a page on https://www.akashsebastian.com</figcaption>
+  </figure>
+</div>
+
+<div class="step">
+  <h3>Step 4 &mdash; the victim's own browser is logged out</h3>
+  <p>Navigating to the account settings page now lands on a logged-out home feed. Pinterest also emails the account owner a "Your Pinterest account is deactivated" notice, which is the victim's only signal that anything happened.</p>
+  <figure class="shot">
+    <img src="pin2/04_www_after_deactivation.png" alt="PoC step 4">
+    <figcaption>04 &middot; www.pinterest.com/settings/account/ after the attack: session dead, redirected to the logged-out home feed</figcaption>
+  </figure>
+</div>
+
+<h2>What was sent</h2>
+<p class="muted">The entire attack payload, in full:</p>
+<pre>&lt;form method="POST" action="https://ask.pinterest.com/api/proxy/pinterest/users/me/"&gt;
+  &lt;input type="hidden" name="first_name" value="Stag"&gt;
+&lt;/form&gt;
+&lt;script&gt;document.forms[0].submit()&lt;/script&gt;</pre>
+<p>
+  Any logged-in Pinterest user who visits a page containing those five lines, on any website, has
+  <code>v3_deactivate_user</code> executed with their session. There is no dialog, no confirmation, and no way to
+  undo it from the victim's side. Pinterest's own deactivation email is the only trace.
+</p>
+
+<h2>Scope of the write surface</h2>
+<p>
+  The proxy accepts arbitrary v3 gateway paths, not just <code>users/me/</code>. Reads were confirmed across
+  <code>v3_get_user_handler</code>, <code>v3_get_pins_handler</code>, <code>v3_get_user_boards_handler</code> and
+  <code>v3_get_conversations</code>. The deactivation write proves the write side is open. Other v3 write handlers
+  reachable through the same proxy (verified in a separate submission): MFA backup-code regeneration, session
+  revocation, and forced conversation creation.
+</p>
+
+<h2>Why this is more than a best-practice note</h2>
+<div class="callout">
+  <p>
+    <b>Impact:</b> permanent, irreversible destruction of any logged-in Pinterest account, from any website, with one
+    page visit and zero interaction. The victim cannot prevent it, cannot see it happening, and cannot undo it.
+    Pins, boards, saved content and account history are destroyed. For a business or creator account this also
+    destroys the storefront and analytics attached to it.
+  </p>
+</div>
+<p>
+  The www.pinterest.com relay requires <code>X-CSRFToken</code> for the same operation. The ask proxy was deployed
+  without that defense. This is a server-side security misconfiguration on an authenticated write surface, in scope
+  under *.pinterest.com.
+</p>
+
+<h2>Fix</h2>
+<p>
+  Require a CSRF token or an Origin/Referer allowlist on every write through <code>/api/proxy/pinterest/*</code>,
+  matching the enforcement already present on the www relay. Restricting the proxy's path allowlist to the
+  read-only handlers the ask app actually needs would also close the write surface.
+</p>
+
+<footer>
+  Demonstration performed against my own test account (pinhunt1688259527, created for this test).
+  Live PoC: https://www.akashsebastian.com/poc/pin-csrf-deactivate.html (manual interlock on the write step).
+  Deactivation confirmed server-side: Pinterest's "Your Pinterest account is deactivated" email received
+  2026-10-14 12:37 UTC, seconds after the PoC fired.
+</footer>
+</div>
+</body>
+</html>
