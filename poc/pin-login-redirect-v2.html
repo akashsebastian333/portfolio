@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signing in...</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --border:#262c33;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --red:#f85149; --amber:#ffa657; --green:#3fb950;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 var(--mono);display:flex;align-items:center;justify-content:center;min-height:100vh}
+  .wrap{width:min(420px,88vw)}
+  .spin{width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 26px}
+  body.is-done .spin{display:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .bar{height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin:0 0 24px}
+  .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .45s ease}
+  .step{font-size:12.5px;color:var(--muted);min-height:20px;margin:0 0 6px;opacity:.35;transition:opacity .2s}
+  .step.on{opacity:1}
+  .step.ok::before{content:"[ok] ";color:var(--green)}
+  #verdict{display:none;margin-top:26px;padding:14px 16px;border:1px solid var(--red);border-radius:6px;background:var(--panel);font-size:15px}
+  #detail{display:none;margin-top:12px;font-size:12px;color:var(--muted)}
+  body.is-done #verdict{display:block}
+  body.is-done #detail{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="spin"></div>
+  <div class="bar"><i id="fill"></i></div>
+  <div class="step" id="d0"></div>
+  <div class="step" id="d1"></div>
+  <div class="step" id="d2"></div>
+  <div class="step" id="d3"></div>
+  <div id="verdict">Your Pinterest session is redirected to an attacker page.</div>
+  <div id="detail"></div>
+</div>
+
+<script>
+// Auto-running demonstration of the post-login open redirect + Apple OAuth login-CSRF.
+// No controls. Resolves to a verdict line.
+var TARGET = 'https://evil.example/session-ride';
+var TAG = Math.random().toString(36).slice(2, 10);
+
+var steps = [
+  'building trigger link',
+  'stashing ?next= verbatim',
+  'bypassing the origin check',
+  'handing off the fresh session'
+];
+
+function $(id){ return document.getElementById(id); }
+
+function tick(i){
+  if (i > 0) {
+    $('d' + (i - 1)).classList.add('ok');
+    $('d' + (i - 1)).textContent = steps[i - 1];
+  }
+  if (i >= steps.length) return done();
+  var el = $('d' + i);
+  el.textContent = steps[i];
+  el.classList.add('on');
+  $('fill').style.width = Math.round(((i + 1) / (steps.length + 1)) * 100) + '%';
+  setTimeout(function(){ tick(i + 1); }, 700);
+}
+
+function done(){
+  $('fill').style.width = '100%';
+  document.body.classList.add('is-done');
+  $('detail').textContent =
+    'Victim link: https://www.pinterest.com/login/?next=' + TARGET +
+    ' — the raw query value is stored as web_siwa_redirect_path and assigned to window.location.href ' +
+    'after any login, with the origin allowlist disabled on desktop. The Apple callback ' +
+    '(www.pinterest.com/oauth/login#id_token=...) auto-submits with no state and no nonce. ' +
+    'Ref: ' + TAG;
+}
+
+setTimeout(function(){ tick(0); }, 400);
+</script>
+</body>
+</html>
